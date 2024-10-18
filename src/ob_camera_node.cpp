@@ -1073,6 +1073,10 @@ void OBCameraNode::onNewFrameSetCallback(const std::shared_ptr<ob::FrameSet>& fr
     depth_frame_ = frame_set->getFrame(OB_FRAME_DEPTH);
     CHECK_NOTNULL(device_info_);
     has_first_color_frame_ = has_first_color_frame_ || (enable_stream_[COLOR] && color_frame);
+
+    // 여기에서 depth 프레임을 저장
+    depth_frame_blocked_ = frame_set->depthFrame();
+
     if (isGemini335PID(device_info_->pid()) && enable_stream_[DEPTH]) {
       depth_frame_ = processDepthFrameFilter(depth_frame_);
       bool align_success = false;

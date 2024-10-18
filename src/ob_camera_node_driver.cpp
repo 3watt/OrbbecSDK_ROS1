@@ -86,6 +86,9 @@ OBCameraNodeDriver::~OBCameraNodeDriver() {
   if (query_thread_ && query_thread_->joinable()) {
     query_thread_->join();
   }
+  if (diagnostics_thread_ && diagnostics_thread_->joinable()) {
+    diagnostics_thread_->join();
+  }
 }
 
 void OBCameraNodeDriver::init() {
@@ -142,6 +145,7 @@ void OBCameraNodeDriver::init() {
   });
   query_thread_ = std::make_shared<std::thread>([this]() { queryDevice(); });
   reset_device_thread_ = std::make_shared<std::thread>([this]() { resetDeviceThread(); });
+  diagnostics_thread_ = std::make_shared<std::thread>([this]() { setupDiagnosticUpdater(); });
 }
 
 std::shared_ptr<ob::Device> OBCameraNodeDriver::selectDevice(
@@ -255,8 +259,11 @@ void OBCameraNodeDriver::initializeDevice(const std::shared_ptr<ob::Device> &dev
   }
   CHECK_NOTNULL(device_info_.get());
   std::string connection_type = device_info_->connectionType();
+  std::string serial_number = device_info_->serialNumber();
+  serial_number.erase(remove(serial_number.begin(), serial_number.end(), ' '), serial_number.end());
+  camera_connection_status_[serial_number] = true;
   ROS_INFO_STREAM("Device " << device_info_->name() << " connected");
-  ROS_INFO_STREAM("Serial number: " << device_info_->serialNumber());
+  ROS_INFO_STREAM("Serial number: " << serial_number);
   ROS_INFO_STREAM("Firmware version: " << device_info_->firmwareVersion());
   ROS_INFO_STREAM("Hardware version: " << device_info_->hardwareVersion());
   ROS_INFO_STREAM("device uid: " << device_info_->uid());
@@ -355,8 +362,11 @@ void OBCameraNodeDriver::deviceDisconnectCallback(
   }
   for (size_t i = 0; i < device_list->deviceCount(); i++) {
     std::string device_uid = device_list->uid(i);
+    std::string serial_number = device_list->serialNumber(i);
+    serial_number.erase(remove(serial_number.begin(), serial_number.end(), ' '), serial_number.end());
     ROS_INFO_STREAM("Device with uid " << device_uid << " disconnected");
     if (device_uid == device_uid_) {
+      camera_connection_status_[serial_number] = false;
       ROS_INFO_STREAM("deviceDisconnectCallback : Before reset device, wait for device lock");
       std::unique_lock<decltype(reset_device_lock_)> reset_lock(reset_device_lock_);
       reset_device_ = true;
@@ -366,6 +376,40 @@ void OBCameraNodeDriver::deviceDisconnectCallback(
     }
   }
   ROS_INFO_STREAM("deviceDisconnectCallback : deviceDisconnectCallback end");
+}
+
+void OBCameraNodeDriver::setupDiagnosticUpdater() {
+  std::string node_namespace = nh_.getNamespace();
+  std::string to_remove = "/ob_camera_";
+  diagnostic_updater_ =
+      std::make_shared<diagnostic_updater::Updater>(nh_, nh_private_, " camera");
+  diagnostic_updater_->setHardwareID(node_namespace);
+  ros::WallRate rate(diagnostics_frequency_);
+  size_t pos = node_namespace.find(to_remove);
+  if (pos != std::string::npos) {
+      node_namespace.erase(pos, to_remove.length());
+  }
+  diagnostic_updater_->add(node_namespace + "_Connection", this, &OBCameraNodeDriver::diagnosticCameraStatus);
+  while (ros::ok()) {
+    diagnostic_updater_->force_update();
+    rate.sleep();
+  }
+}
+
+void OBCameraNodeDriver::diagnosticCameraStatus(diagnostic_updater::DiagnosticStatusWrapper& stat) {
+  for (const auto& camera_status : camera_connection_status_) {
+    std::string serial_number = camera_status.first;
+    bool connected = camera_status.second;
+
+    if (!connected) {
+      stat.summary(diagnostic_msgs::DiagnosticStatus::ERROR, "NO RESPONSE");
+      stat.add(serial_number, connected ? "CONNECTED" : "DISCONNECTED");
+    }
+    else{
+      stat.summary(diagnostic_msgs::DiagnosticStatus::OK, "OK");
+    }
+  }
+  
 }
 
 OBLogSeverity OBCameraNodeDriver::obLogSeverityFromString(const std::string &log_level) {

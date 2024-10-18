@@ -154,6 +154,8 @@ class OBCameraNode {
 
   void diagnosticTemperature(diagnostic_updater::DiagnosticStatusWrapper &stat);
 
+  void diagnosticCameraStatus(diagnostic_updater::DiagnosticStatusWrapper &stat);
+
   void publishStaticTF(const ros::Time &t, const tf2::Vector3 &trans, const tf2::Quaternion &q,
                        const std::string &from, const std::string &to);
 
@@ -472,6 +474,7 @@ class OBCameraNode {
   // ordered point cloud
   bool ordered_pc_ = false;
   std::shared_ptr<ob::Frame> depth_frame_ = nullptr;
+  std::shared_ptr<ob::DepthFrame> depth_frame_blocked_ = nullptr;
   std::string device_preset_ = "Default";
   // filter switch
   bool enable_decimation_filter_ = false;

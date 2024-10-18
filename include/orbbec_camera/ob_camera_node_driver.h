@@ -22,6 +22,7 @@
 #include <pthread.h>
 #define BACKWARD_HAS_DW 1
 #include <backward-cpp/backward.hpp>
+#include <unordered_map>
 
 namespace orbbec_camera {
 
@@ -53,6 +54,10 @@ class OBCameraNodeDriver {
 
   void deviceDisconnectCallback(const std::shared_ptr<ob::DeviceList>& device_list);
 
+  void setupDiagnosticUpdater();
+
+  void diagnosticCameraStatus(diagnostic_updater::DiagnosticStatusWrapper &stat);
+
   static OBLogSeverity obLogSeverityFromString(const std::string& log_level);
 
   void queryDevice();
@@ -78,6 +83,9 @@ class OBCameraNodeDriver {
   int connection_delay_ = 1.0;
   std::shared_ptr<std::thread> query_thread_ = nullptr;
   std::recursive_mutex device_lock_;
+  std::shared_ptr<diagnostic_updater::Updater> diagnostic_updater_ = nullptr;
+  double diagnostics_frequency_ = 1.0;
+  std::shared_ptr<std::thread> diagnostics_thread_ = nullptr;
   int device_num_ = 1;
   bool enumerate_net_device_ = false;
   std::shared_ptr<std::thread> reset_device_thread_ = nullptr;
@@ -95,5 +103,6 @@ class OBCameraNodeDriver {
   static backward::SignalHandling sh;
   bool enable_hardware_reset_ = false;
   bool hardware_reset_done_ = false;
+  std::unordered_map<std::string, bool> camera_connection_status_;
 };
 }  // namespace orbbec_camera

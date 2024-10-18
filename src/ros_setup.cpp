@@ -791,15 +791,69 @@ void OBCameraNode::setupDiagnosticUpdater() {
   }
   std::string serial_number = device_info_->serialNumber();
   diagnostic_updater_ =
-      std::make_shared<diagnostic_updater::Updater>(nh_, nh_private_, "ob_camera_" + serial_number);
+      std::make_shared<diagnostic_updater::Updater>(nh_, nh_private_, " ob_camera_" + serial_number);
   diagnostic_updater_->setHardwareID(serial_number);
   ros::WallRate rate(diagnostics_frequency_);
   diagnostic_updater_->add("Temperature", this, &OBCameraNode::diagnosticTemperature);
+  diagnostic_updater_->add("CameraStatus", this, &OBCameraNode::diagnosticCameraStatus);
   while (is_running_ && ros::ok()) {
     diagnostic_updater_->force_update();
     rate.sleep();
   }
 }
+
+void OBCameraNode::diagnosticCameraStatus(diagnostic_updater::DiagnosticStatusWrapper& stat) {
+  std::string camera_status;
+  // 카메라가 연결되어 있는지 확인
+  if (!device_) {
+    stat.summary(diagnostic_msgs::DiagnosticStatus::ERROR, "NO RESPONSE");
+    return;
+  }
+
+  // 센서가 활성화되어 있는지 확인
+  bool sensors_active = true;
+  for (const auto& stream_index : IMAGE_STREAMS) {
+    if (enable_stream_[stream_index] && !sensors_[stream_index]) {
+      sensors_active = false;
+      break;
+    }
+  }
+
+  if (!sensors_active) {
+    stat.summary(diagnostic_msgs::DiagnosticStatus::ERROR, "NO RESPONSE");
+    return;
+  }
+
+  if (depth_frame_blocked_) {
+      const uint16_t* depth_data = static_cast<const uint16_t*>(depth_frame_blocked_->data());
+      int width = depth_frame_blocked_->width();
+      int height = depth_frame_blocked_->height();
+      
+      const uint16_t min_depth_threshold = 200;  // 최소 Depth 임계값 (단위: mm)
+      int obstructed_pixel_count = 0;
+      int total_pixels = width * height;
+      
+      // 일정 비율 이상의 픽셀들이 임계값 이하일 경우, 차단으로 판단
+      for (int i = 0; i < total_pixels; ++i) {
+        if (depth_data[i] < min_depth_threshold) {
+          obstructed_pixel_count++;
+        }
+      }
+
+      if ((obstructed_pixel_count / static_cast<float>(total_pixels)) > 0.7) {
+        camera_status = "BLOCKED";
+      } else {
+        camera_status = "OK";
+      }
+    }
+
+  if (camera_status == "BLOCKED") {
+    stat.summary(diagnostic_msgs::DiagnosticStatus::WARN, camera_status);
+  } else {
+    stat.summary(diagnostic_msgs::DiagnosticStatus::OK, "OK");
+  }
+}
+
 
 void OBCameraNode::readDefaultGain() {
   for (const auto& stream_index : IMAGE_STREAMS) {
