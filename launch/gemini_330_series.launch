@@ -13,6 +13,7 @@
     <!-- https://www.orbbec.com/docs/g330-use-depth-presets/ -->
     <arg name="device_preset" default="Default"/>
     <arg name="diagnostics_frequency" default="1.0"/>
+    <arg name="block_detection_distance" default="0.2"/>
     <arg name="enable_laser" default="true"/>
     <arg name="laser_on_off_mode" default="0"/>
     <arg name="sync_mode" default="standalone"/>
@@ -141,6 +142,7 @@
             <param name="use_hardware_time" value="$(arg use_hardware_time)"/>
             <param name="device_preset" value="$(arg device_preset)"/>
             <param name="diagnostics_frequency" value="$(arg diagnostics_frequency)"/>
+            <param name="block_detection_distance" value="$(arg block_detection_distance)"/>
             <param name="align_mode" value="$(arg align_mode)"/>
             <param name="enable_laser" value="$(arg enable_laser)"/>
             <param name="laser_on_off_mode" value="$(arg laser_on_off_mode)"/>

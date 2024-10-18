@@ -789,10 +789,11 @@ void OBCameraNode::setupDiagnosticUpdater() {
     ROS_WARN_STREAM("Device does not support temperature reading");
     return;
   }
+  std::string node_namespace = nh_.getNamespace();
   std::string serial_number = device_info_->serialNumber();
   diagnostic_updater_ =
-      std::make_shared<diagnostic_updater::Updater>(nh_, nh_private_, " ob_camera_" + serial_number);
-  diagnostic_updater_->setHardwareID(serial_number);
+      std::make_shared<diagnostic_updater::Updater>(nh_, nh_private_, node_namespace);
+  diagnostic_updater_->setHardwareID(node_namespace);
   ros::WallRate rate(diagnostics_frequency_);
   diagnostic_updater_->add("Temperature", this, &OBCameraNode::diagnosticTemperature);
   diagnostic_updater_->add("CameraStatus", this, &OBCameraNode::diagnosticCameraStatus);
@@ -829,18 +830,20 @@ void OBCameraNode::diagnosticCameraStatus(diagnostic_updater::DiagnosticStatusWr
       int width = depth_frame_blocked_->width();
       int height = depth_frame_blocked_->height();
       
-      const uint16_t min_depth_threshold = 200;  // 최소 Depth 임계값 (단위: mm)
+      double min_depth_threshold = 0.2; // 최소 Depth 임계값 (단위: m)
+      nh_private_.getParam("block_detection_distance", min_depth_threshold);
       int obstructed_pixel_count = 0;
       int total_pixels = width * height;
       
       // 일정 비율 이상의 픽셀들이 임계값 이하일 경우, 차단으로 판단
       for (int i = 0; i < total_pixels; ++i) {
-        if (depth_data[i] < min_depth_threshold) {
+        if (depth_data[i] < (min_depth_threshold * 100)) {
           obstructed_pixel_count++;
         }
       }
 
-      if ((obstructed_pixel_count / static_cast<float>(total_pixels)) > 0.7) {
+      if ((obstructed_pixel_count / static_cast<float>(total_pixels)) > 0.7) {  //70% 이상 가려지면
+
         camera_status = "BLOCKED";
       } else {
         camera_status = "OK";

@@ -380,16 +380,11 @@ void OBCameraNodeDriver::deviceDisconnectCallback(
 
 void OBCameraNodeDriver::setupDiagnosticUpdater() {
   std::string node_namespace = nh_.getNamespace();
-  std::string to_remove = "/ob_camera_";
   diagnostic_updater_ =
-      std::make_shared<diagnostic_updater::Updater>(nh_, nh_private_, " camera");
+      std::make_shared<diagnostic_updater::Updater>(nh_, nh_private_, node_namespace);
   diagnostic_updater_->setHardwareID(node_namespace);
   ros::WallRate rate(diagnostics_frequency_);
-  size_t pos = node_namespace.find(to_remove);
-  if (pos != std::string::npos) {
-      node_namespace.erase(pos, to_remove.length());
-  }
-  diagnostic_updater_->add(node_namespace + "_Connection", this, &OBCameraNodeDriver::diagnosticCameraStatus);
+  diagnostic_updater_->add("Connection", this, &OBCameraNodeDriver::diagnosticCameraStatus);
   while (ros::ok()) {
     diagnostic_updater_->force_update();
     rate.sleep();
