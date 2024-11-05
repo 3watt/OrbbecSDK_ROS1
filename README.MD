@@ -11,11 +11,11 @@ It enables smooth integration of Orbbec 3D cameras into ROS projects.
     rosrun orbbec_camera list_ob_devices.sh
     ```
     
-    Found Orbbec device Orbbec Gemini 336, usb port 2-1, serial number CP7X54P00090
-    Found Orbbec device Orbbec Gemini 336, usb port 2-2, serial number CP7X54P0006Y
-    Found Orbbec device Orbbec Gemini 336, usb port 2-3, serial number CP7X54P0005M
-    Found Orbbec device Orbbec Gemini 336, usb port 2-7, serial number CP7X54P0007S
-    Found Orbbec device Orbbec Gemini 336, usb port 2-9, serial number CP7X54P0007J
+    Found Orbbec device Orbbec Gemini 336, usb port 2-1, serial number CP7X54P00090  
+    Found Orbbec device Orbbec Gemini 336, usb port 2-2, serial number CP7X54P0006Y  
+    Found Orbbec device Orbbec Gemini 336, usb port 2-3, serial number CP7X54P0005M  
+    Found Orbbec device Orbbec Gemini 336, usb port 2-7, serial number CP7X54P0007S  
+    Found Orbbec device Orbbec Gemini 336, usb port 2-9, serial number CP7X54P0007J  
     
 2. usb 메모리 크기 증가 → **효과 있음**
     
