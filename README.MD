@@ -4,7 +4,24 @@
 
 Orbbec ROS SDK is a wrapper for Orbbec SDK that supports ROS Kinetic, Melodic, and Noetic distributions.
 It enables smooth integration of Orbbec 3D cameras into ROS projects.
-
+## Don't forget 
+1. usb port 와 serial number 확인방법
+    
+    ```bash
+    rosrun orbbec_camera list_ob_devices.sh
+    ```
+    
+    Found Orbbec device Orbbec Gemini 336, usb port 2-1, serial number CP7X54P00090
+    Found Orbbec device Orbbec Gemini 336, usb port 2-2, serial number CP7X54P0006Y
+    Found Orbbec device Orbbec Gemini 336, usb port 2-3, serial number CP7X54P0005M
+    Found Orbbec device Orbbec Gemini 336, usb port 2-7, serial number CP7X54P0007S
+    Found Orbbec device Orbbec Gemini 336, usb port 2-9, serial number CP7X54P0007J
+    
+2. usb 메모리 크기 증가 → **효과 있음**
+    
+    ```bash
+    echo 128 | sudo tee /sys/module/usbcore/parameters/usbfs_memory_mb
+    ```
 ## Table of Contents
 <!-- TOC -->
 * [Orbbec ROS SDK](#orbbec-ros-sdk)
