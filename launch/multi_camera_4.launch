@@ -3,19 +3,19 @@
     <arg name="camera_front_name" default="camera_front_view"/>
     <arg name="3d_sensor" default="gemini_330_4"/>
     <arg name="camera1_prefix" default="middle_gemini"/>
-    <arg name="camera2_prefix" default="right_gemini"/>
-    <arg name="camera3_prefix" default="left_gemini"/>
+    <arg name="camera2_prefix" default="left_gemini"/>
+    <arg name="camera3_prefix" default="right_gemini"/>
     <arg name="camera4_prefix" default="gemini"/>
     <!-- 0104001 -->
-    <arg name="camera1_serial" default="CP728410000C"/>
+    <!-- <arg name="camera1_serial" default="CP728410000C"/>
     <arg name="camera2_serial" default="CP7284100083"/>
     <arg name="camera3_serial" default="CP72841000CX"/>
-    <arg name="camera4_serial" default="CP7284100016"/>
+    <arg name="camera4_serial" default="CP7284100016"/> -->
     <!-- 0104002 -->
-    <arg name="camera1_serial" default="CP728410003B"/>
-    <arg name="camera2_serial" default="CP728410006T"/>
-    <arg name="camera3_serial" default="CP728410005J"/>
-    <arg name="camera4_serial" default="CP728410009D"/>
+    <arg name="camera1_serial" default="CP728410009D"/>
+    <arg name="camera2_serial" default="CP728410003B"/>
+    <arg name="camera3_serial" default="CP728410006T"/>
+    <arg name="camera4_serial" default="CP728410005J"/>
 
     <arg name="camera1_usb_port" default=""/>
     <arg name="camera2_usb_port" default=""/>
@@ -44,7 +44,7 @@
         <arg name="camera_name" value="$(arg camera_bottom_name)_$(arg camera2_prefix)"/>
         <arg name="usb_port" value="$(arg camera2_usb_port)"/>
         <arg name="device_num" value="$(arg device_num)"/>
-        <arg name="serial_number" value="$(arg camera1_serial)"/>
+        <arg name="serial_number" value="$(arg camera2serial)"/>
 
         <arg name="enable_point_cloud" default="$(arg enable_point_cloud)"/>
     </include>
@@ -52,7 +52,7 @@
         <arg name="camera_name" value="$(arg camera_bottom_name)_$(arg camera3_prefix)"/>
         <arg name="usb_port" value="$(arg camera3_usb_port)"/>
         <arg name="device_num" value="$(arg device_num)"/>
-        <arg name="serial_number" value="$(arg camera1_serial)"/>
+        <arg name="serial_number" value="$(arg camera3_serial)"/>
 
         <arg name="enable_point_cloud" default="$(arg enable_point_cloud)"/>
     </include>
@@ -60,7 +60,7 @@
         <arg name="camera_name" value="$(arg camera_front_name)_$(arg camera4_prefix)"/>
         <arg name="usb_port" value="$(arg camera4_usb_port)"/>
         <arg name="device_num" value="$(arg device_num)"/>
-        <arg name="serial_number" value="$(arg camera1_serial)"/>
+        <arg name="serial_number" value="$(arg camera4_serial)"/>
 
         <arg name="enable_point_cloud" default="$(arg enable_point_cloud)"/>
     </include>
