@@ -1,24 +1,21 @@
 <launch>
-    <arg name="camera_name" default="camera"/>
+    <arg name="camera_bottom_name" default="camera_bottom_view"/>
+    <arg name="camera_front_name" default="camera_front_view"/>
     <arg name="3d_sensor" default="gemini_330_4"/>
-    <arg name="camera1_prefix" default="01"/>
-    <arg name="camera2_prefix" default="02"/>
-    <arg name="camera3_prefix" default="03"/>
-    <arg name="camera4_prefix" default="04"/>
-    <!-- <arg name="camera1_usb_port" default="2-1"/>
-    <arg name="camera2_usb_port" default="2-2"/>
-    <arg name="camera3_usb_port" default="2-3"/>
-    <arg name="camera4_usb_port" default="2-7"/>
-    <arg name="camera5_usb_port" default="2-9"/> -->
-    <!-- <arg name="camera1_serial" default=""/>
-    <arg name="camera2_serial" default=""/>
-    <arg name="camera3_serial" default=""/>
-    <arg name="camera4_serial" default=""/>
-    <arg name="camera5_serial" default=""/> -->
+    <arg name="camera1_prefix" default="middle_gemini"/>
+    <arg name="camera2_prefix" default="right_gemini"/>
+    <arg name="camera3_prefix" default="left_gemini"/>
+    <arg name="camera4_prefix" default="gemini"/>
+    <!-- 0104001 -->
     <arg name="camera1_serial" default="CP728410000C"/>
     <arg name="camera2_serial" default="CP7284100083"/>
     <arg name="camera3_serial" default="CP72841000CX"/>
     <arg name="camera4_serial" default="CP7284100016"/>
+    <!-- 0104002 -->
+    <arg name="camera1_serial" default="CP728410003B"/>
+    <arg name="camera2_serial" default="CP728410006T"/>
+    <arg name="camera3_serial" default="CP728410005J"/>
+    <arg name="camera4_serial" default="CP728410009D"/>
 
     <arg name="camera1_usb_port" default=""/>
     <arg name="camera2_usb_port" default=""/>
@@ -26,37 +23,77 @@
     <arg name="camera4_usb_port" default=""/>
 
     <arg name="device_num" default="4"/>
+    <arg name="enable_point_cloud" default="true"/>
+
+    <!-- ground filter params -->
+
+    <arg name="ransac_dist_threshold" default="0.05"/>
+    <arg name="ground_threshold" default="0.2"/>
+
+
     <include file="$(find orbbec_camera)/launch/$(arg 3d_sensor).launch">
-        <arg name="camera_name" value="$(arg camera_name)_$(arg camera1_prefix)"/>
+        <arg name="camera_name" value="$(arg camera_bottom_name)_$(arg camera1_prefix)"/>
         <arg name="usb_port" value="$(arg camera1_usb_port)"/>
+        <arg name="device_num" value="$(arg device_num)"/>
         <arg name="serial_number" value="$(arg camera1_serial)"/>
-        <arg name="device_num" value="$(arg device_num)"/>
+
+        <arg name="enable_point_cloud" default="$(arg enable_point_cloud)"/>
     </include>
 
     <include file="$(find orbbec_camera)/launch/$(arg 3d_sensor).launch">
-        <arg name="camera_name" value="$(arg camera_name)_$(arg camera2_prefix)"/>
+        <arg name="camera_name" value="$(arg camera_bottom_name)_$(arg camera2_prefix)"/>
         <arg name="usb_port" value="$(arg camera2_usb_port)"/>
-        <arg name="serial_number" value="$(arg camera2_serial)"/>
         <arg name="device_num" value="$(arg device_num)"/>
-    </include>
+        <arg name="serial_number" value="$(arg camera1_serial)"/>
 
+        <arg name="enable_point_cloud" default="$(arg enable_point_cloud)"/>
+    </include>
     <include file="$(find orbbec_camera)/launch/$(arg 3d_sensor).launch">
-        <arg name="camera_name" value="$(arg camera_name)_$(arg camera3_prefix)"/>
+        <arg name="camera_name" value="$(arg camera_bottom_name)_$(arg camera3_prefix)"/>
         <arg name="usb_port" value="$(arg camera3_usb_port)"/>
-        <arg name="serial_number" value="$(arg camera3_serial)"/>
         <arg name="device_num" value="$(arg device_num)"/>
-    </include>
+        <arg name="serial_number" value="$(arg camera1_serial)"/>
 
+        <arg name="enable_point_cloud" default="$(arg enable_point_cloud)"/>
+    </include>
     <include file="$(find orbbec_camera)/launch/$(arg 3d_sensor).launch">
-        <arg name="camera_name" value="$(arg camera_name)_$(arg camera4_prefix)"/>
+        <arg name="camera_name" value="$(arg camera_front_name)_$(arg camera4_prefix)"/>
         <arg name="usb_port" value="$(arg camera4_usb_port)"/>
-        <arg name="serial_number" value="$(arg camera4_serial)"/>
         <arg name="device_num" value="$(arg device_num)"/>
+        <arg name="serial_number" value="$(arg camera1_serial)"/>
+
+        <arg name="enable_point_cloud" default="$(arg enable_point_cloud)"/>
     </include>
 
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_view_middle_to_base_tf" args="0 0 0 0 0 0 camera_bottom_view_middle_link camera_bottom_view_middle_gemini_link" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_right_middle_to_base_tf" args="0 0 0 0 0 0 camera_bottom_view_right_link camera_bottom_view_right_gemini_link" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_left_middle_to_base_tf" args="0 0 0 0 0 0 camera_bottom_view_left_link camera_bottom_view_left_gemini_link" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_front_view_to_base_tf" args="0 0 0 0 0 0 camera_front_view_link camera_front_view_gemini_link" />
 
-    <node pkg="tf" type="static_transform_publisher" name="camera_01_tf" args="0 0 0 0 0 0 base_link camera_01_link 20" />
-    <node pkg="tf" type="static_transform_publisher" name="camera_02_tf" args="0 0.3 0 0 0 0 base_link camera_02_link 20" />
-    <node pkg="tf" type="static_transform_publisher" name="camera_03_tf" args="0 0.6 0 0 0 0 base_link camera_03_link 20" />
-    <node pkg="tf" type="static_transform_publisher" name="camera_04_tf" args="0 0.9 0 0 0 0 base_link camera_04_link 20" />
+    <include file="$(find watt_robot_common)/launch/pcl_ground_filter.launch">
+        <arg name="node_name"             value="camera_bottom_view_left_filter"/>
+        <arg name="pc_in"                 value="/camera_bottom_view_left_gemini/depth/points"/>
+        <arg name="pc_out"                value="/camera_bottom_view_left_gemini/depth/filtered_points"/>
+        <arg name="ransac_dist_threshold" value="$(arg ransac_dist_threshold)"/>
+        <arg name="ground_threshold"      value="$(arg ground_threshold)"/>
+        <arg name="transform_update"      value="true"/>
+    </include>
+
+    <include file="$(find watt_robot_common)/launch/pcl_ground_filter.launch">
+        <arg name="node_name"             value="camera_bottom_view_right_filter"/>
+        <arg name="pc_in"                 value="/camera_bottom_view_right_gemini/depth/points"/>
+        <arg name="pc_out"                value="/camera_bottom_view_right_gemini/depth/filtered_points"/>
+        <arg name="ransac_dist_threshold" value="$(arg ransac_dist_threshold)"/>
+        <arg name="ground_threshold"      value="$(arg ground_threshold)"/>
+        <arg name="transform_update"      value="true"/>
+    </include>
+
+    <include file="$(find watt_robot_common)/launch/pcl_ground_filter.launch">
+        <arg name="node_name"             value="camera_bottom_view_middle_filter"/>
+        <arg name="pc_in"                 value="/camera_bottom_view_middle_gemini/depth/points"/>
+        <arg name="pc_out"                value="/camera_bottom_view_middle_gemini/depth/filtered_points"/>
+        <arg name="ransac_dist_threshold" value="$(arg ransac_dist_threshold)"/>
+        <arg name="ground_threshold"      value="$(arg ground_threshold)"/>
+        <arg name="transform_update"      value="true"/>
+    </include>
 </launch>
