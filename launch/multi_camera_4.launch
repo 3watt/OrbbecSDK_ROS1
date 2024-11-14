@@ -7,15 +7,15 @@
     <arg name="camera3_prefix" default="right_gemini"/>
     <arg name="camera4_prefix" default="gemini"/>
     <!-- 0104001 -->
-    <!-- <arg name="camera1_serial" default="CP728410000C"/>
-    <arg name="camera2_serial" default="CP7284100083"/>
-    <arg name="camera3_serial" default="CP72841000CX"/>
-    <arg name="camera4_serial" default="CP7284100016"/> -->
+    <arg name="camera1_serial" default="CP7X54P0006Y"/>
+    <arg name="camera2_serial" default="CP7X54P00090"/>
+    <arg name="camera3_serial" default="CP7X54P0005M"/>
+    <arg name="camera4_serial" default="CP7X54P0007J"/>
     <!-- 0104002 -->
-    <arg name="camera1_serial" default="CP728410009D"/>
+    <!-- <arg name="camera1_serial" default="CP728410009D"/>
     <arg name="camera2_serial" default="CP728410003B"/>
     <arg name="camera3_serial" default="CP728410006T"/>
-    <arg name="camera4_serial" default="CP728410005J"/>
+    <arg name="camera4_serial" default="CP728410005J"/> -->
 
     <!-- <arg name="camera1_usb_port" default="2-7.3"/>
     <arg name="camera2_usb_port" default="2-7.1"/>
