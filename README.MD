@@ -17,13 +17,15 @@ It enables smooth integration of Orbbec 3D cameras into ROS projects.
     Found Orbbec device Orbbec Gemini 336, usb port 2-7, serial number CP7X54P0007S  
     Found Orbbec device Orbbec Gemini 336, usb port 2-9, serial number CP7X54P0007J  
     
-2. usb 메모리 크기 증가 → **효과 있음**
+2. usb 메모리 크기 증가 → **효과 있음, 일회성 적용** 
     
     ```bash
     echo 128 | sudo tee /sys/module/usbcore/parameters/usbfs_memory_mb
     ```
 확인 커맨드  
+
     ```bash
+
      cat /sys/module/usbcore/parameters/usbfs_memory_mb 
     ```
 
