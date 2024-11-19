@@ -22,6 +22,11 @@ It enables smooth integration of Orbbec 3D cameras into ROS projects.
     ```bash
     echo 128 | sudo tee /sys/module/usbcore/parameters/usbfs_memory_mb
     ```
+확인 커맨드  
+    ```bash
+     cat /sys/module/usbcore/parameters/usbfs_memory_mb 
+    ```
+
 ## Table of Contents
 <!-- TOC -->
 * [Orbbec ROS SDK](#orbbec-ros-sdk)
