@@ -2,20 +2,20 @@
     <arg name="camera_bottom_name" default="camera_bottom_view"/>
     <arg name="camera_front_name" default="camera_front_view"/>
     <arg name="3d_sensor" default="gemini_330_4"/>
-    <arg name="camera1_prefix" default="left_gemini"/>
-    <arg name="camera2_prefix" default="right_gemini"/>
-    <arg name="camera3_prefix" default="mid_gemini"/>
+    <arg name="camera1_prefix" default="middle_gemini"/>
+    <arg name="camera2_prefix" default="left_gemini"/>
+    <arg name="camera3_prefix" default="right_gemini"/>
     <arg name="camera4_prefix" default="gemini"/>
     <!-- 0104001 -->
-    <!-- <arg name="camera1_serial" default="CP728410000C"/>
-    <arg name="camera2_serial" default="CP7284100083"/>
-    <arg name="camera3_serial" default="CP72841000CX"/>
-    <arg name="camera4_serial" default="CP7284100016"/> -->
+    <arg name="camera1_serial" default="CP7X54P0006Y"/>
+    <arg name="camera2_serial" default="CP7X54P00090"/>
+    <arg name="camera3_serial" default="CP7X54P0005M"/>
+    <arg name="camera4_serial" default="CP7X54P0007J"/>
     <!-- 0104002 -->
-    <arg name="camera1_serial" default="CP728410009A"/>
-    <arg name="camera2_serial" default="CP728410004A"/>
-    <arg name="camera3_serial" default="CP7284100084"/>
-    <arg name="camera4_serial" default="CP728410004P"/>
+    <!-- <arg name="camera1_serial" default="CP728410009D"/>
+    <arg name="camera2_serial" default="CP728410003B"/>
+    <arg name="camera3_serial" default="CP728410006T"/>
+    <arg name="camera4_serial" default="CP728410005J"/> -->
 
     <!-- <arg name="camera1_usb_port" default="2-7.3"/>
     <arg name="camera2_usb_port" default="2-7.1"/>
@@ -28,7 +28,6 @@
 
     <arg name="device_num" default="4"/>
     <arg name="enable_point_cloud" default="true"/>
-    <arg name="enable_colored_point_cloud" default="true"/>
 
     <!-- ground filter params -->
 
@@ -43,7 +42,6 @@
         <arg name="serial_number" value="$(arg camera1_serial)"/>
 
         <arg name="enable_point_cloud" default="$(arg enable_point_cloud)"/>
-        <arg name="enable_colored_point_cloud" default="$(arg enable_colored_point_cloud)" />
     </include>
 
     <include file="$(find orbbec_camera)/launch/$(arg 3d_sensor).launch">
@@ -71,7 +69,7 @@
         <arg name="enable_point_cloud" default="$(arg enable_point_cloud)"/>
     </include>
 
-    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_view_middle_to_base_tf" args="0 0 0 0 0 0 camera_bottom_view_mid_link camera_bottom_view_mid_gemini_link" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_view_middle_to_base_tf" args="0 0 0 0 0 0 camera_bottom_view_middle_link camera_bottom_view_middle_gemini_link" />
     <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_right_middle_to_base_tf" args="0 0 0 0 0 0 camera_bottom_view_right_link camera_bottom_view_right_gemini_link" />
     <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_left_middle_to_base_tf" args="0 0 0 0 0 0 camera_bottom_view_left_link camera_bottom_view_left_gemini_link" />
     <node pkg="tf2_ros" type="static_transform_publisher" name="camera_front_view_to_base_tf" args="0 0 0 0 0 0 camera_front_view_link camera_front_view_gemini_link" />
@@ -95,9 +93,9 @@
     </include>
 
     <include file="$(find watt_robot_common)/launch/pcl_ground_filter.launch">
-        <arg name="node_name"             value="camera_bottom_view_mid_filter"/>
-        <arg name="pc_in"                 value="/camera_bottom_view_mid_gemini/depth/points"/>
-        <arg name="pc_out"                value="/camera_bottom_view_mid_gemini/depth/filtered_points"/>
+        <arg name="node_name"             value="camera_bottom_view_middle_filter"/>
+        <arg name="pc_in"                 value="/camera_bottom_view_middle_gemini/depth/points"/>
+        <arg name="pc_out"                value="/camera_bottom_view_middle_gemini/depth/filtered_points"/>
         <arg name="ransac_dist_threshold" value="$(arg ransac_dist_threshold)"/>
         <arg name="ground_threshold"      value="$(arg ground_threshold)"/>
         <arg name="transform_update"      value="true"/>
