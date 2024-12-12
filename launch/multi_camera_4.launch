@@ -7,15 +7,20 @@
     <arg name="camera3_prefix" default="right_gemini"/>
     <arg name="camera4_prefix" default="gemini"/>
     <!-- 0104001 -->
-    <arg name="camera1_serial" default="CP7X54P0006Y"/>
+    <!-- <arg name="camera1_serial" default="CP7X54P0006Y"/>
     <arg name="camera2_serial" default="CP7X54P00090"/>
     <arg name="camera3_serial" default="CP7X54P0005M"/>
-    <arg name="camera4_serial" default="CP7X54P0007J"/>
+    <arg name="camera4_serial" default="CP7X54P0007J"/> -->
     <!-- 0104002 -->
     <!-- <arg name="camera1_serial" default="CP728410009D"/>
     <arg name="camera2_serial" default="CP728410003B"/>
     <arg name="camera3_serial" default="CP728410006T"/>
     <arg name="camera4_serial" default="CP728410005J"/> -->
+    <!-- 0104003 -->
+    <arg name="camera1_serial" default="CP728410001X"/>
+    <arg name="camera2_serial" default="CP7284100014"/>
+    <arg name="camera3_serial" default="CP728410001G"/>
+    <arg name="camera4_serial" default="CP72841000AC"/>
 
     <!-- <arg name="camera1_usb_port" default="2-7.3"/>
     <arg name="camera2_usb_port" default="2-7.1"/>
@@ -69,9 +74,9 @@
         <arg name="enable_point_cloud" default="$(arg enable_point_cloud)"/>
     </include>
 
-    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_view_middle_to_base_tf" args="0 0 0 0 0 0 camera_bottom_view_middle_link camera_bottom_view_middle_gemini_link" />
-    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_right_middle_to_base_tf" args="0 0 0 0 0 0 camera_bottom_view_right_link camera_bottom_view_right_gemini_link" />
-    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_left_middle_to_base_tf" args="0 0 0 0 0 0 camera_bottom_view_left_link camera_bottom_view_left_gemini_link" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_view_middle_to_base_tf" args="0 0 -0.02 -0.015 0 0 camera_bottom_view_middle_link camera_bottom_view_middle_gemini_link" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_right_middle_to_base_tf" args="0 0 -0.02 -0.01 0 0 camera_bottom_view_right_link camera_bottom_view_right_gemini_link" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_bottom_left_middle_to_base_tf" args="0 0 -0.02 0.003 0 0 camera_bottom_view_left_link camera_bottom_view_left_gemini_link" />
     <node pkg="tf2_ros" type="static_transform_publisher" name="camera_front_view_to_base_tf" args="0 0 0 0 0 0 camera_front_view_link camera_front_view_gemini_link" />
 
     <include file="$(find watt_robot_common)/launch/pcl_ground_filter.launch">
