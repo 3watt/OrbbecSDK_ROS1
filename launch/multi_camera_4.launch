@@ -12,10 +12,10 @@
     <arg name="camera3_serial" default="CP7284100033"/>
     <arg name="camera4_serial" default="CP7284100056"/> -->
     <!-- 0104002 -->
-    <!-- <arg name="camera1_serial" default="CP728410009D"/>
-    <arg name="camera2_serial" default="CP728410003B"/>
-    <arg name="camera3_serial" default="CP728410006T"/>
-    <arg name="camera4_serial" default="CP728410005J"/> -->
+    <!-- <arg name="camera1_serial" default="CP7284100084"/>
+    <arg name="camera2_serial" default="CP728410009A"/>
+    <arg name="camera3_serial" default="CP728410004A"/>
+    <arg name="camera4_serial" default="CP728410004P"/> -->
     <!-- 0104003 -->
     <!-- <arg name="camera1_serial" default="CP728410001X"/>
     <arg name="camera2_serial" default="CP7284100014"/>
