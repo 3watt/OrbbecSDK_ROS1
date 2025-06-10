@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="device_type" default="lidar"/>
+    <!-- Basic camera parameters -->
+    <arg name="camera_name" default="camera"/>
+    <!-- open device delay time 100m-->
+    <arg name="connection_delay" default="100"/>
+    <arg name="log_level" default="none"/>
+    <arg name="publish_tf" default="true"/>
+    <arg name="tf_publish_rate" default="10.0"/>
+    <arg name="time_domain" default="global"/><!-- "device", "global", "system" -->
+    <arg name="upgrade_firmware" default=""/>
+    <!-- Network device settings: default enumerate_net_device is set to true, which will automatically enumerate network devices -->
+    <!-- If you do not want to automatically enumerate network devices, -->
+    <!-- you can set enumerate_net_device to true, ip_address to the device's IP address, and port to the default value of 8090 -->
+    <arg name="enumerate_net_device" default="false"/>
+    <arg name="ip_address" default=""/>
+    <arg name="port" default="0"/>
+
+    <arg name="lidar_format" default="ANY"/>
+    <arg name="lidar_rate" default="30"/>
+    <arg name="min_angle" default="-135.0"/>
+    <arg name="max_angle" default="135.0"/>
+    <arg name="min_range" default="0.05"/>
+    <arg name="max_range" default="30.0"/>
+    <arg name="echo_mode" default="single channel"/>
+
+    <!-- Misc parameters -->
+    <arg name="device_num" default="1"/>
+
+    <arg name="enable_heartbeat" default="false"/>
+
+    <group ns="$(arg camera_name)">
+        <node name="camera" pkg="orbbec_camera" type="orbbec_camera_node" output="screen">
+            <param name="device_type" value="$(arg camera_name)"/>
+            <!-- Use the parameters defined above -->
+            <param name="camera_name" value="$(arg camera_name)"/>
+            <param name="connection_delay" value="$(arg connection_delay)"/>
+            <param name="log_level" value="$(arg log_level)"/>
+            <param name="publish_tf" value="$(arg publish_tf)"/>
+            <param name="tf_publish_rate" value="$(arg tf_publish_rate)"/>
+            <param name="time_domain" value="$(arg time_domain)"/>
+
+            <param name="enumerate_net_device" value="$(arg enumerate_net_device)"/>
+            <param name="ip_address" value="$(arg ip_address)"/>
+            <param name="port" value="$(arg port)"/>
+
+            <param name="upgrade_firmware" value="$(arg upgrade_firmware)"/>
+
+            <param name="lidar_format" value="$(arg lidar_format)"/>
+            <param name="lidar_rate" value="$(arg lidar_rate)"/>
+            <param name="min_angle" value="$(arg min_angle)"/>
+            <param name="max_angle" value="$(arg max_angle)"/>
+            <param name="min_range" value="$(arg min_range)"/>
+            <param name="max_range" value="$(arg max_range)"/>
+            <param name="echo_mode" value="$(arg echo_mode)"/>
+
+
+
+            <param name="device_num" value="$(arg device_num)"/>
+            <param name="enable_hardware_reset" value="$(arg enable_hardware_reset)"/>
+        </node>
+    </group>
+    <!-- Load config yaml file -->
+    <group if="$(eval config_file_path != '')">
+        <rosparam ns="$(arg camera_name)/$(arg camera_name)" file="$(arg config_file_path)" command="load" />
+    </group>
+</launch>

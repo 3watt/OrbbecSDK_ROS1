@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <launch>
+    <arg name="device_type" default="camera"/>
     <!-- Basic camera parameters -->
     <arg name="camera_name" default="camera"/>
     <!-- open device delay time 100m-->
@@ -224,6 +225,7 @@
 
     <group ns="$(arg camera_name)">
         <node name="camera" pkg="orbbec_camera" type="orbbec_camera_node" output="screen">
+            <param name="device_type" value="$(arg device_type)"/>
             <!-- Use the parameters defined above -->
             <param name="camera_name" value="$(arg camera_name)"/>
             <param name="connection_delay" value="$(arg connection_delay)"/>
