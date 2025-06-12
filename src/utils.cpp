@@ -94,6 +94,14 @@ OBFormat OBFormatFromString(const std::string &format) {
     return OB_FORMAT_BYR2;
   } else if (fixed_format == "RW16") {
     return OB_FORMAT_RW16;
+  } else if (fixed_format == "LIDAR_POINT") {
+    return OB_FORMAT_LIDAR_POINT;
+  } else if (fixed_format == "LIDAR_SPHERE_POINT") {
+    return OB_FORMAT_LIDAR_SPHERE_POINT;
+  } else if (fixed_format == "LIDAR_SCAN") {
+    return OB_FORMAT_LIDAR_SCAN;
+  } else if (fixed_format == "LIDAR_CALIBRATION") {
+    return OB_FORMAT_LIDAR_CALIBRATION;
   }
   //   else if (fixed_format == "DISP16") {
   //     return OB_FORMAT_DISP16;
@@ -102,6 +110,26 @@ OBFormat OBFormatFromString(const std::string &format) {
     return OB_FORMAT_UNKNOWN;
   }
 }
+
+OBLiDARScanRate OBScanRateFromInt(const int rate) {
+  std::cout << "OBScanRateFromInt: " << rate << std::endl;
+  if (rate == 5) {
+    return OB_LIDAR_SCAN_5HZ;
+  } else if (rate == 10) {
+    return OB_LIDAR_SCAN_10HZ;
+  } else if (rate == 15) {
+    return OB_LIDAR_SCAN_15HZ;
+  } else if (rate == 20) {
+    return OB_LIDAR_SCAN_20HZ;
+  } else if (rate == 25) {
+    return OB_LIDAR_SCAN_25HZ;
+  } else if (rate == 30) {
+    return OB_LIDAR_SCAN_30HZ;
+  } else {
+    return OB_LIDAR_SCAN_UNKNOWN;
+  }
+}
+
 
 std::string OBFormatToString(const OBFormat &format) {
   switch (format) {
@@ -171,6 +199,14 @@ std::string OBFormatToString(const OBFormat &format) {
       return "BYR2";
     case OB_FORMAT_RW16:
       return "RW16";
+    case OB_FORMAT_LIDAR_POINT:
+      return "LIDAR_POINT";
+    case OB_FORMAT_LIDAR_SPHERE_POINT:
+      return "LIDAR_SPHERE_POINT";
+    case OB_FORMAT_LIDAR_SCAN:
+      return "LIDAR_SCAN";
+    case OB_FORMAT_LIDAR_CALIBRATION:
+      return "LIDAR_CALIBRATION";
     // case OB_FORMAT_DISP16:
     //   return "DISP16";
     default:
@@ -805,6 +841,8 @@ std::string OBSensorTypeToString(const OBSensorType &type) {
       return "RIGHT_IR";
     case OB_SENSOR_RAW_PHASE:
       return "RAW_PHASE";
+    case OB_SENSOR_LIDAR:
+      return "LIDAR";
     default:
       return "UNKNOWN";
   }
@@ -836,6 +874,8 @@ OBStreamType obStreamTypeFromString(const std::string &stream_type) {
     return OB_STREAM_IR_RIGHT;
   } else if (upper_stream_type == "RAW_PHASE") {
     return OB_STREAM_RAW_PHASE;
+  } else if (upper_stream_type == "LIDAR") {
+    return OB_STREAM_LIDAR;
   } else {
     return OB_STREAM_UNKNOWN;
   }
@@ -857,6 +897,16 @@ std::string getDistortionModels(OBCameraDistortion distortion) {
     default:
       return sensor_msgs::distortion_models::PLUMB_BOB;
   }
+}
+
+double deg2rad(double deg) { return deg * M_PI / 180.0; }
+
+double rad2deg(double rad) {
+  double angle_degrees = rad * (180.0 / M_PI);
+  if (angle_degrees < 0) {
+    angle_degrees += 360.0;
+  }
+  return angle_degrees;
 }
 
 }  // namespace orbbec_camera

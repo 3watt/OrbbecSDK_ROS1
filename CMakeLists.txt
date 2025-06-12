@@ -166,6 +166,7 @@ endif ()
 set(SOURCE_FILES
   src/d2c_viewer.cpp
   src/ob_camera_node.cpp
+  src/ob_lidar_node.cpp
   src/ob_camera_node_driver.cpp
   src/ros_sensor.cpp
   src/ros_service.cpp

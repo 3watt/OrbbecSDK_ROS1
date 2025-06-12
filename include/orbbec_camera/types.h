@@ -52,10 +52,14 @@ const stream_index_pair INFRA0{OB_STREAM_IR, 0};
 const stream_index_pair INFRA1{OB_STREAM_IR_LEFT, 0};
 const stream_index_pair INFRA2{OB_STREAM_IR_RIGHT, 0};
 
+const stream_index_pair LIDAR{OB_STREAM_LIDAR, 0};
+
 const stream_index_pair GYRO{OB_STREAM_GYRO, 0};
 const stream_index_pair ACCEL{OB_STREAM_ACCEL, 0};
 
 const std::vector<stream_index_pair> IMAGE_STREAMS = {DEPTH, INFRA0, COLOR, INFRA1, INFRA2};
+
+const std::vector<stream_index_pair> LIDAR_STREAMS = {LIDAR};
 
 const std::vector<stream_index_pair> HID_STREAMS = {GYRO, ACCEL};
 const std::map<std::string, OBDepthPrecisionLevel> DEPTH_PRECISION_STR2ENUM = {

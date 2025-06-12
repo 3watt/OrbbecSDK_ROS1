@@ -115,6 +115,8 @@ bool isOpenNIDevice(int pid);
 
 OBMultiDeviceSyncMode OBSyncModeFromString(const std::string &mode);
 
+OBLiDARScanRate OBScanRateFromInt(const int rate);
+
 std::string OBSyncModeToString(const OBMultiDeviceSyncMode &mode);
 
 std::ostream &operator<<(std::ostream &os, const OBMultiDeviceSyncMode &rhs);
@@ -150,5 +152,9 @@ OBStreamType obStreamTypeFromString(const std::string &stream_type);
 std::ostream &operator<<(std::ostream &os, const OBSensorType &rhs);
 
 std::string getDistortionModels(OBCameraDistortion distortion);
+
+double deg2rad(double deg);
+
+double rad2deg(double rad);
 
 }  // namespace orbbec_camera
