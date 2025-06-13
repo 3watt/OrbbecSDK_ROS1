@@ -112,9 +112,6 @@ void OBLidarNode::getParameters() {
     param_name = stream_name_[stream_index] + "_optical_frame_id";
     optical_frame_id_[stream_index] =
         nh_private_.param<std::string>(param_name, default_optical_frame_id);
-    ROS_INFO_STREAM("frame_id_[stream_index]: " << frame_id_[stream_index]
-                                                << "  optical_frame_id_[stream_index]: "
-                                                << optical_frame_id_[stream_index]);
   }
   publish_tf_ = nh_private_.param<bool>("publish_tf", true);
   tf_publish_rate_ = nh_private_.param<double>("tf_publish_rate", 0.0);
