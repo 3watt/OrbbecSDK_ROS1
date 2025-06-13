@@ -54,8 +54,7 @@ namespace orbbec_camera {
 namespace orbbec_lidar {
 class OBLidarNode {
  public:
-  OBLidarNode(ros::NodeHandle &nh, ros::NodeHandle &nh_private,
-               std::shared_ptr<ob::Device> device);
+  OBLidarNode(ros::NodeHandle &nh, ros::NodeHandle &nh_private, std::shared_ptr<ob::Device> device);
 
   OBLidarNode(const OBLidarNode &) = delete;
 
@@ -81,66 +80,51 @@ class OBLidarNode {
   }
 
  private:
-
   void init();
 
-// void setupDevices();
+  void setupDevices();
 
-//   void selectBaseStream();
+  void selectBaseStream();
 
-//   void setupProfiles();
+  void setupProfiles();
 
   void getParameters();
 
-//   void setupTopics();
+  void setupPublishers();
 
-//   void setupPipelineConfig();
+  void startStreams();
 
-//   void printSensorProfiles(const std::shared_ptr<ob::Sensor>& sensor);
+  void setupPipelineConfig();
 
-//   void setupPublishers();
+  void stopStreams();
 
-//   void stopStreams();
+  void printSensorProfiles(const std::shared_ptr<ob::Sensor> &sensor);
 
-//   void onNewFrameSetCallback(std::shared_ptr<ob::FrameSet> frame_set);
+  void onNewFrameSetCallback(std::shared_ptr<ob::FrameSet> frame_set);
 
-//   std::vector<OBLiDARPoint> spherePointToPoint(OBLiDARSpherePoint* sphere_point,
-//                                                uint32_t point_count);
+  void publishScan(std::shared_ptr<ob::FrameSet> frame_set);
 
-//   void publishScan(std::shared_ptr<ob::FrameSet> frame_set);
+  void publishPointCloud(std::shared_ptr<ob::FrameSet> frame_set);
 
-//   void publishPointCloud(std::shared_ptr<ob::FrameSet> frame_set);
+  void publishSpherePointCloud(std::shared_ptr<ob::FrameSet> frame_set);
 
-//   void publishSpherePointCloud(std::shared_ptr<ob::FrameSet> frame_set);
+  void publishStaticTransforms();
 
-//   uint64_t getFrameTimestampUs(const std::shared_ptr<ob::Frame>& frame);
+  void calcAndPublishStaticTransform();
 
-//   void filterScan(sensor_msgs::LaserScan& scan);
+  void publishStaticTF(const ros::Time &t, const tf2::Vector3 &trans, const tf2::Quaternion &q,
+                       const std::string &from, const std::string &to);
 
-//   sensor_msgs::PointCloud2 filterPointCloud(sensor_msgs::PointCloud2& point_cloud) const;
+  void publishDynamicTransforms();
 
-//   void publishStaticTransforms();
+  std::vector<OBLiDARPoint> spherePointToPoint(OBLiDARSpherePoint *sphere_point,
+                                               uint32_t point_count);
 
-//   void calcAndPublishStaticTransform();
+  uint64_t getFrameTimestampUs(const std::shared_ptr<ob::Frame> &frame);
 
-//   void publishStaticTF(const ros::Time &t, const tf2::Vector3 &trans, const tf2::Quaternion &q,
-//                        const std::string &from, const std::string &to);
+  void filterScan(sensor_msgs::LaserScan &scan);
 
-//   void publishDynamicTransforms();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  sensor_msgs::PointCloud2 filterPointCloud(sensor_msgs::PointCloud2 &point_cloud) const;
 
  private:
   ros::NodeHandle nh_;
@@ -150,11 +134,12 @@ class OBLidarNode {
   std::shared_ptr<ob::Device> device_ = nullptr;
   std::shared_ptr<ob::DeviceInfo> device_info_ = nullptr;
   std::atomic_bool is_running_{false};
-  std::map<stream_index_pair, std::shared_ptr<ROSOBSensor>> sensors_;
+  std::map<stream_index_pair, std::shared_ptr<ob::Sensor>> sensors_;
   std::map<stream_index_pair, ob_format> format_;  // for open stream
   std::map<stream_index_pair, bool> enable_stream_;
   std::map<stream_index_pair, std::shared_ptr<ob::StreamProfile>> stream_profile_;
-  std::map<stream_index_pair, std::shared_ptr<ob::StreamProfileList>> supported_profiles_;
+  std::map<stream_index_pair, std::vector<std::shared_ptr<ob::LiDARStreamProfile>>>
+      supported_profiles_;
   std::map<stream_index_pair, bool> stream_started_;
   std::map<stream_index_pair, std::string> stream_name_;
 
@@ -163,14 +148,22 @@ class OBLidarNode {
   stream_index_pair base_stream_ = LIDAR;
   std::string camera_name_ = "camera";
 
-  bool publish_tf_ = true;
+  std::shared_ptr<ros::Publisher> scan_pub_;
+  std::shared_ptr<ros::Publisher> point_cloud_pub_;
+
+  bool publish_tf_ = false;
+  bool tf_published_ = false;
+  std::condition_variable tf_cv_;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_tf_broadcaster_ = nullptr;
   std::shared_ptr<tf2_ros::TransformBroadcaster> dynamic_tf_broadcaster_ = nullptr;
   std::vector<geometry_msgs::TransformStamped> static_tf_msgs_;
   std::shared_ptr<std::thread> tf_thread_ = nullptr;
   double tf_publish_rate_ = 10.0;
   std::recursive_mutex device_lock_;
+  bool enable_heartbeat_ = false;
 
+  std::shared_ptr<ob::Pipeline> pipeline_ = nullptr;
+  std::shared_ptr<ob::Config> pipeline_config_ = nullptr;
   std::atomic_bool pipeline_started_{false};
   bool is_initialized_ = false;
   std::string time_domain_ = "global";

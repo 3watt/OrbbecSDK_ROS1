@@ -2,7 +2,7 @@
 <launch>
     <arg name="device_type" default="lidar"/>
     <!-- Basic camera parameters -->
-    <arg name="camera_name" default="camera"/>
+    <arg name="camera_name" default="lidar"/>
     <!-- open device delay time 100m-->
     <arg name="connection_delay" default="100"/>
     <arg name="log_level" default="none"/>
@@ -10,11 +10,11 @@
     <arg name="tf_publish_rate" default="10.0"/>
     <arg name="time_domain" default="device"/><!-- "device", "global", "system" -->
     <arg name="upgrade_firmware" default=""/>
-    <arg name="enumerate_net_device" default="false"/>
-    <arg name="ip_address" default="192.168.1.100"/>
-    <arg name="port" default="2401"/>
+    <arg name="enumerate_net_device" default="true"/>
+    <arg name="ip_address" default=""/>
+    <arg name="port" default="0"/>
     <arg name="lidar_format" default="ANY"/>
-    <arg name="lidar_rate" default="30"/>
+    <arg name="lidar_rate" default="20"/>
     <arg name="min_angle" default="-135.0"/>
     <arg name="max_angle" default="135.0"/>
     <arg name="min_range" default="0.05"/>
@@ -25,7 +25,7 @@
     <arg name="enable_heartbeat" default="false"/>
 
     <group ns="$(arg camera_name)">
-        <node name="camera" pkg="orbbec_camera" type="orbbec_camera_node" output="screen">
+        <node name="lidar" pkg="orbbec_camera" type="orbbec_camera_node" output="screen">
             <param name="device_type" value="$(arg device_type)"/>
             <!-- Use the parameters defined above -->
             <param name="camera_name" value="$(arg camera_name)"/>

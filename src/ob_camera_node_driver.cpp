@@ -321,17 +321,14 @@ void OBCameraNodeDriver::initializeDevice(const std::shared_ptr<ob::Device> &dev
       }
     });
   }
-  if (ob_camera_node_ && ob_camera_node_->isInitialized()) {
+  if ((ob_camera_node_ && ob_camera_node_->isInitialized()) ||
+      (ob_lidar_node_ && ob_lidar_node_->isInitialized())) {
     device_connected_ = true;
-  } else {
+  } else if (!ob_camera_node_ || !ob_camera_node_->isInitialized()) {
     device_connected_ = false;
     ob_camera_node_.reset();
     return;
-  }
-
-  if (ob_lidar_node_ && ob_lidar_node_->isInitialized()) {
-    device_connected_ = true;
-  } else {
+  } else if (!ob_lidar_node_ && !ob_lidar_node_->isInitialized()) {
     device_connected_ = false;
     ob_lidar_node_.reset();
     return;
@@ -423,9 +420,7 @@ void OBCameraNodeDriver::connectNetDevice(const std::string &ip_address, int por
 void OBCameraNodeDriver::checkConnectionTimer() {
   if (!device_connected_) {
     ROS_DEBUG_STREAM("wait for device " << serial_number_ << " to be connected");
-  } else if (!ob_camera_node_) {
-    device_connected_ = false;
-  } else if (!ob_lidar_node_) {
+  } else if (!ob_camera_node_ && !ob_lidar_node_) {
     device_connected_ = false;
   }
 }
