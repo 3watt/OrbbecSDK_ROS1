@@ -15,6 +15,9 @@
     <arg name="port" default="0"/>
     <arg name="lidar_format" default="ANY"/> <!-- "LIDAR_POINT", "LIDAR_SPHERE_POINT", "LIDAR_SCAN" -->, ,
     <arg name="lidar_rate" default="20"/>
+    <arg name="repetitive_scan_mode" default="-1"/>
+    <arg name="filter_level" default="-1"/>
+    <arg name="vertical_fov" default="-1.0"/>
     <arg name="min_angle" default="-135.0"/>
     <arg name="max_angle" default="135.0"/>
     <arg name="min_range" default="0.05"/>
@@ -40,6 +43,9 @@
             <param name="upgrade_firmware" value="$(arg upgrade_firmware)"/>
             <param name="lidar_format" value="$(arg lidar_format)"/>
             <param name="lidar_rate" value="$(arg lidar_rate)"/>
+            <param name="repetitive_scan_mode" value="$(arg repetitive_scan_mode)"/>
+            <param name="filter_level" value="$(arg filter_level)"/>
+            <param name="vertical_fov" value="$(arg vertical_fov)"/>
             <param name="min_angle" value="$(arg min_angle)"/>
             <param name="max_angle" value="$(arg max_angle)"/>
             <param name="min_range" value="$(arg min_range)"/>

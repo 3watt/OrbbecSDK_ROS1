@@ -122,6 +122,9 @@ void OBLidarNode::getParameters() {
   max_angle_ = nh_private_.param<float>("max_angle", 135.0);
   min_range_ = nh_private_.param<float>("min_range", 0.05);
   max_range_ = nh_private_.param<float>("max_range", 30.0);
+  repetitive_scan_mode_ = nh_private_.param<int>("repetitive_scan_mode", -1);
+  filter_level_ = nh_private_.param<int>("filter_level", -1);
+  vertical_fov_ = nh_private_.param<float>("vertical_fov", -1.0);
 }
 
 void OBLidarNode::setupDevices() {
@@ -152,6 +155,45 @@ void OBLidarNode::setupDevices() {
     ROS_INFO_STREAM("Setting echo mode to "
                     << (device_->getIntProperty(OB_PROP_LIDAR_ECHO_MODE_INT) ? "First Echo"
                                                                              : "Last Echo"));
+  }
+  if (repetitive_scan_mode_ != -1 &&
+      device_->isPropertySupported(OB_PROP_LIDAR_REPETITIVE_SCAN_MODE_INT,
+                                   OB_PERMISSION_READ_WRITE)) {
+    auto range = device_->getIntPropertyRange(OB_PROP_LIDAR_REPETITIVE_SCAN_MODE_INT);
+    if (repetitive_scan_mode_ <= range.min || repetitive_scan_mode_ >= range.max) {
+      ROS_ERROR("repetitive scan mode value is out of range[%d,%d], please check the value",
+                range.min, range.max);
+    } else {
+      device_->setIntProperty(OB_PROP_LIDAR_REPETITIVE_SCAN_MODE_INT, repetitive_scan_mode_);
+      ROS_INFO_STREAM("Setting repetitive scan mode to "
+                      << device_->getIntProperty(OB_PROP_LIDAR_REPETITIVE_SCAN_MODE_INT));
+    }
+  }
+  if (filter_level_ != -1 &&
+      device_->isPropertySupported(OB_PROP_LIDAR_TAIL_FILTER_LEVEL_INT, OB_PERMISSION_READ_WRITE)) {
+    auto range = device_->getIntPropertyRange(OB_PROP_LIDAR_TAIL_FILTER_LEVEL_INT);
+    if (filter_level_ <= range.min || filter_level_ >= range.max) {
+      ROS_ERROR("filter level value is out of range[%d,%d], please check the value", range.min,
+                range.max);
+    } else {
+      device_->setIntProperty(OB_PROP_LIDAR_TAIL_FILTER_LEVEL_INT, filter_level_);
+      device_->setIntProperty(OB_PROP_LIDAR_APPLY_CONFIGS_INT, 1);
+      ROS_INFO_STREAM("Setting filter level to "
+                      << device_->getIntProperty(OB_PROP_LIDAR_TAIL_FILTER_LEVEL_INT));
+    }
+  }
+
+  if (vertical_fov_ != -1.0 &&
+      device_->isPropertySupported(OB_PROP_LIDAR_MEMS_FOV_SIZE_FLOAT, OB_PERMISSION_READ_WRITE)) {
+    auto range = device_->getFloatPropertyRange(OB_PROP_LIDAR_MEMS_FOV_SIZE_FLOAT);
+    if (vertical_fov_ <= range.min || vertical_fov_ >= range.max) {
+      ROS_ERROR("vertical fov value is out of range[%f,%f], please check the value", range.min,
+                range.max);
+    } else {
+      device_->setFloatProperty(OB_PROP_LIDAR_MEMS_FOV_SIZE_FLOAT, vertical_fov_);
+      ROS_INFO_STREAM("Setting vertical fov to "
+                      << device_->getFloatProperty(OB_PROP_LIDAR_MEMS_FOV_SIZE_FLOAT));
+    }
   }
 }
 
