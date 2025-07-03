@@ -13,7 +13,7 @@
     <arg name="enumerate_net_device" default="true"/>
     <arg name="ip_address" default=""/>
     <arg name="port" default="0"/>
-    <arg name="lidar_format" default="ANY"/> <!-- "LIDAR_POINT", "LIDAR_SPHERE_POINT", "LIDAR_SCAN" -->, ,
+    <arg name="lidar_format" default="ANY"/> <!-- "LIDAR_POINT", "LIDAR_SPHERE_POINT", "LIDAR_SCAN" -->
     <arg name="lidar_rate" default="20"/>
     <arg name="repetitive_scan_mode" default="-1"/>
     <arg name="filter_level" default="-1"/>
