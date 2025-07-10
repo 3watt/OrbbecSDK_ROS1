@@ -125,6 +125,7 @@ void OBLidarNode::getParameters() {
   repetitive_scan_mode_ = nh_private_.param<int>("repetitive_scan_mode", -1);
   filter_level_ = nh_private_.param<int>("filter_level", -1);
   vertical_fov_ = nh_private_.param<float>("vertical_fov", -1.0);
+  enable_scan_to_point_ = nh_private_.param<bool>("enable_scan_to_point", false);
 }
 
 void OBLidarNode::setupDevices() {
@@ -273,10 +274,10 @@ void OBLidarNode::setupProfiles() {
   }
 }
 void OBLidarNode::setupPublishers() {
-  if (format_[LIDAR] == OB_FORMAT_LIDAR_SCAN) {
+  if (!enable_scan_to_point_ && format_[LIDAR] == OB_FORMAT_LIDAR_SCAN) {
     scan_pub_ =
         std::make_shared<ros::Publisher>(nh_.advertise<sensor_msgs::LaserScan>("scan/points", 10));
-  } else if (format_[LIDAR] == OB_FORMAT_LIDAR_POINT ||
+  } else if (enable_scan_to_point_ || format_[LIDAR] == OB_FORMAT_LIDAR_POINT ||
              format_[LIDAR] == OB_FORMAT_LIDAR_SPHERE_POINT) {
     point_cloud_pub_ = std::make_shared<ros::Publisher>(
         nh_.advertise<sensor_msgs::PointCloud2>("cloud/points", 10));
@@ -346,12 +347,15 @@ void OBLidarNode::onNewFrameSetCallback(std::shared_ptr<ob::FrameSet> frame_set)
       publishStaticTransforms();
       tf_published_ = true;
     }
-    if (format_[LIDAR] == OB_FORMAT_LIDAR_SCAN) {
+    if (format_[LIDAR] == OB_FORMAT_LIDAR_SCAN && !enable_scan_to_point_) {
       publishScan(frame_set);
+    } else if (format_[LIDAR] == OB_FORMAT_LIDAR_SCAN && enable_scan_to_point_) {
+      publishScanToPoint(frame_set);
     } else if (format_[LIDAR] == OB_FORMAT_LIDAR_POINT) {
       publishPointCloud(frame_set);
     } else if (format_[LIDAR] == OB_FORMAT_LIDAR_SPHERE_POINT) {
       publishSpherePointCloud(frame_set);
+    } else {
     }
   } catch (const ob::Error& e) {
     ROS_ERROR_STREAM("onNewFrameSetCallback error: " << e.getMessage());
@@ -452,7 +456,9 @@ void OBLidarNode::publishScan(std::shared_ptr<ob::FrameSet> frame_set) {
   if (frame_set == nullptr) {
     return;
   }
-  //   std::shared_ptr<ob::LiDARPointsFrame> lidar_frame;
+  if (angle_increment_ == 0.0) {
+    angle_increment_ = getScanAngleIncrement(rate_[LIDAR]);
+  }
   auto lidar_frame = frame_set->getFrame(OB_FRAME_LIDAR_POINTS);
   auto* scans_data = reinterpret_cast<OBLiDARScanPoint*>(lidar_frame->getData());
   auto scan_count = lidar_frame->getDataSize() / sizeof(OBLiDARScanPoint);
@@ -463,7 +469,7 @@ void OBLidarNode::publishScan(std::shared_ptr<ob::FrameSet> frame_set) {
   scan_msg->header.frame_id = frame_id_[LIDAR];
   scan_msg->angle_min = 0.7853981852531433;
   scan_msg->angle_max = 5.495169162750244;
-  scan_msg->angle_increment = 0.0026179938577115536;
+  scan_msg->angle_increment = angle_increment_;
   scan_msg->time_increment = 1.0 / rate_int_[LIDAR] / scan_count;
   scan_msg->scan_time = 1.0 / rate_int_[LIDAR];
   scan_msg->range_min = min_range_;
@@ -482,6 +488,47 @@ void OBLidarNode::publishScan(std::shared_ptr<ob::FrameSet> frame_set) {
   scan_pub_->publish(*scan_msg);
 }
 
+void OBLidarNode::publishScanToPoint(std::shared_ptr<ob::FrameSet> frame_set) {
+  (void)frame_set;
+  if (frame_set == nullptr) {
+    return;
+  }
+  if (angle_increment_ == 0.0) {
+    angle_increment_ = getScanAngleIncrement(rate_[LIDAR]);
+  }
+  auto lidar_frame = frame_set->getFrame(OB_FRAME_LIDAR_POINTS);
+  auto* scans_data = reinterpret_cast<OBLiDARScanPoint*>(lidar_frame->getData());
+  auto scan_count = lidar_frame->getDataSize() / sizeof(OBLiDARScanPoint);
+  auto point_cloud_msg = std::make_shared<sensor_msgs::PointCloud2>();
+  auto frame_timestamp = getFrameTimestampUs(lidar_frame);
+  auto timestamp = fromUsToROSTime(frame_timestamp);
+  sensor_msgs::PointCloud2Modifier modifier(*point_cloud_msg);
+  modifier.setPointCloud2Fields(
+      4, "x", 1, sensor_msgs::PointField::FLOAT32, "y", 1, sensor_msgs::PointField::FLOAT32, "z", 1,
+      sensor_msgs::PointField::FLOAT32, "reflectivity", 1, sensor_msgs::PointField::UINT8);
+  modifier.resize(scan_count);
+  point_cloud_msg->header.stamp = timestamp;
+  point_cloud_msg->header.frame_id = frame_id_[LIDAR];
+  point_cloud_msg->height = 1;
+  point_cloud_msg->width = scan_count;
+  point_cloud_msg->is_dense = true;
+  point_cloud_msg->is_bigendian = false;
+  point_cloud_msg->row_step = point_cloud_msg->width * point_cloud_msg->point_step;
+  point_cloud_msg->data.resize(point_cloud_msg->height * point_cloud_msg->row_step);
+  sensor_msgs::PointCloud2Iterator<float> iter_x(*point_cloud_msg, "x");
+  sensor_msgs::PointCloud2Iterator<float> iter_y(*point_cloud_msg, "y");
+  sensor_msgs::PointCloud2Iterator<float> iter_z(*point_cloud_msg, "z");
+  sensor_msgs::PointCloud2Iterator<uint8_t> iter_reflectivity(*point_cloud_msg, "reflectivity");
+  for (size_t i = 0; i < scan_count; ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_reflectivity) {
+    double rad = 0.7853981852531433 + angle_increment_ * i;
+    *iter_x = static_cast<float>(scans_data[i].distance * cos(rad) / 1000.0);
+    *iter_y = static_cast<float>(scans_data[i].distance * sin(rad) / 1000.0);
+    *iter_z = static_cast<float>(0.0);
+    *iter_reflectivity = static_cast<uint8_t>(scans_data[i].intensity);
+  }
+  *point_cloud_msg = filterPointCloud(*point_cloud_msg);
+  point_cloud_pub_->publish(*point_cloud_msg);
+}
 void OBLidarNode::publishPointCloud(std::shared_ptr<ob::FrameSet> frame_set) {
   (void)frame_set;
   if (frame_set == nullptr) {
@@ -671,12 +718,10 @@ sensor_msgs::PointCloud2 OBLidarNode::filterPointCloud(
   sensor_msgs::PointCloud2Iterator<float> iter_x(point_cloud, "x");
   sensor_msgs::PointCloud2Iterator<float> iter_y(point_cloud, "y");
   sensor_msgs::PointCloud2Iterator<float> iter_z(point_cloud, "z");
-  sensor_msgs::PointCloud2Iterator<uint8_t> iter_reflectivity(point_cloud, "reflectivity");
-  sensor_msgs::PointCloud2Iterator<uint8_t> iter_tag(point_cloud, "tag");
 
   // Process each point
   for (size_t i = 0; i < point_cloud.height * point_cloud.width;
-       ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_reflectivity, ++iter_tag) {
+       ++i, ++iter_x, ++iter_y, ++iter_z) {
     float x = *iter_x;
     float y = *iter_y;
     float z = *iter_z;

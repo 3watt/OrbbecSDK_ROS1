@@ -104,6 +104,8 @@ class OBLidarNode {
 
   void publishScan(std::shared_ptr<ob::FrameSet> frame_set);
 
+  void publishScanToPoint(std::shared_ptr<ob::FrameSet> frame_set);
+
   void publishPointCloud(std::shared_ptr<ob::FrameSet> frame_set);
 
   void publishSpherePointCloud(std::shared_ptr<ob::FrameSet> frame_set);
@@ -182,6 +184,8 @@ class OBLidarNode {
   int repetitive_scan_mode_ = -1;
   int filter_level_ = -1;
   float vertical_fov_ = -1;
+  bool enable_scan_to_point_ = false;
+  double angle_increment_ = 0.0;
 };
 }  // namespace orbbec_lidar
 }  // namespace orbbec_camera

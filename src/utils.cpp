@@ -899,6 +899,23 @@ std::string getDistortionModels(OBCameraDistortion distortion) {
   }
 }
 
+double getScanAngleIncrement(OBLiDARScanRate fps) {
+  switch (fps) {
+    case OB_LIDAR_SCAN_15HZ:
+      return deg2rad(0.075);
+    case OB_LIDAR_SCAN_20HZ:
+      return deg2rad(0.1);
+    case OB_LIDAR_SCAN_25HZ:
+      return deg2rad(0.125);
+    case OB_LIDAR_SCAN_30HZ:
+      return deg2rad(0.15);
+    case OB_LIDAR_SCAN_40HZ:
+      return deg2rad(0.2);
+    default:
+      return deg2rad(0.1);
+  }
+}
+
 double deg2rad(double deg) { return deg * M_PI / 180.0; }
 
 double rad2deg(double rad) {

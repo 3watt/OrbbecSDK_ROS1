@@ -153,6 +153,8 @@ std::ostream &operator<<(std::ostream &os, const OBSensorType &rhs);
 
 std::string getDistortionModels(OBCameraDistortion distortion);
 
+double getScanAngleIncrement(OBLiDARScanRate fps);
+
 double deg2rad(double deg);
 
 double rad2deg(double rad);
