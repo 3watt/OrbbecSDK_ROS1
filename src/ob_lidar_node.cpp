@@ -15,6 +15,7 @@
  *******************************************************************************/
 
 #include "orbbec_camera/ob_lidar_node.h"
+#include "orbbec_camera/utils.h"
 #include "libobsensor/hpp/Utils.hpp"
 #if defined(USE_RK_HW_DECODER)
 #include "orbbec_camera/rk_mpp_decoder.h"
@@ -88,6 +89,11 @@ void OBLidarNode::stopStreams() {
   } catch (...) {
     ROS_ERROR_STREAM("Failed to stop pipeline");
   }
+
+  // Stop IMU if enabled
+  if (enable_imu_) {
+    stopIMU();
+  }
 }
 
 OBLidarNode::~OBLidarNode() noexcept { clean(); }
@@ -126,6 +132,44 @@ void OBLidarNode::getParameters() {
   filter_level_ = nh_private_.param<int>("filter_level", -1);
   vertical_fov_ = nh_private_.param<float>("vertical_fov", -1.0);
   enable_scan_to_point_ = nh_private_.param<bool>("enable_scan_to_point", false);
+
+  // Multi-frame publishing parameter - only for LIDAR_POINT and LIDAR_SPHERE_POINT formats
+  bool use_multi_frame = false;
+  for (const auto &stream_index : LIDAR_STREAMS) {
+    if (format_[stream_index] == OB_FORMAT_LIDAR_POINT || format_[stream_index] == OB_FORMAT_LIDAR_SPHERE_POINT) {
+      use_multi_frame = true;
+      break;
+    }
+  }
+
+  if (use_multi_frame) {
+    publish_n_pkts_ = nh_private_.param<int>("publish_n_pkts", 1);
+    if (publish_n_pkts_ < 1 || publish_n_pkts_ > 12000) {
+      ROS_WARN_STREAM("publish_n_pkts value " << publish_n_pkts_
+                      << " is out of range [1, 12000], setting to 1");
+      publish_n_pkts_ = 1;
+    }
+    ROS_INFO_STREAM("Multi-frame publishing enabled: " << publish_n_pkts_ << " frames will be merged");
+  } else {
+    publish_n_pkts_ = 1;
+    ROS_INFO_STREAM("Multi-frame publishing disabled for current lidar format");
+  }
+
+  // IMU parameters
+  enable_imu_ = nh_private_.param<bool>("enable_imu", false);
+  imu_rate_ = nh_private_.param<std::string>("imu_rate", "50hz");
+  accel_range_ = nh_private_.param<std::string>("accel_range", "2g");
+  gyro_range_ = nh_private_.param<std::string>("gyro_range", "1000dps");
+  liner_accel_cov_ = nh_private_.param<double>("linear_accel_cov", 0.0001);
+  angular_vel_cov_ = nh_private_.param<double>("angular_vel_cov", 0.0001);
+
+  // Setup IMU streams if enabled
+  if (enable_imu_) {
+    enable_stream_[ACCEL] = true;
+    enable_stream_[GYRO] = true;
+
+    accel_gyro_frame_id_ = camera_name_ + "_imu_frame";
+  }
 }
 
 void OBLidarNode::setupDevices() {
@@ -282,6 +326,23 @@ void OBLidarNode::setupPublishers() {
     point_cloud_pub_ = std::make_shared<ros::Publisher>(
         nh_.advertise<sensor_msgs::PointCloud2>("cloud/points", 10));
   }
+
+  if (enable_imu_) {
+    std::string topic_name = "imu/sample";
+    imu_publisher_ = std::make_shared<ros::Publisher>(
+        nh_.advertise<sensor_msgs::Imu>(topic_name, 10));
+
+    for (const auto &stream_index : HID_STREAMS) {
+      std::string info_topic_name = stream_name_[stream_index] + "/imu_info";
+      imu_info_publishers_[stream_index] =
+          nh_.advertise<orbbec_camera::IMUInfo>(info_topic_name, 1, true);
+    }
+
+    // Setup lidar to imu extrinsics publisher
+    std::string extrinsics_topic_name = "/" + camera_name_ + "/lidar_to_imu";
+    lidar_to_imu_extrinsics_publisher_ =
+        nh_.advertise<orbbec_camera::Extrinsics>(extrinsics_topic_name, 1, true);
+  }
 }
 
 void OBLidarNode::startStreams() {
@@ -306,6 +367,11 @@ void OBLidarNode::startStreams() {
     throw std::runtime_error("Failed to start pipeline");
   }
   pipeline_started_.store(true);
+
+  // Start IMU if enabled
+  if (enable_imu_) {
+    startIMU();
+  }
 }
 
 void OBLidarNode::setupPipelineConfig() {
@@ -347,15 +413,29 @@ void OBLidarNode::onNewFrameSetCallback(std::shared_ptr<ob::FrameSet> frame_set)
       publishStaticTransforms();
       tf_published_ = true;
     }
-    if (format_[LIDAR] == OB_FORMAT_LIDAR_SCAN && !enable_scan_to_point_) {
-      publishScan(frame_set);
-    } else if (format_[LIDAR] == OB_FORMAT_LIDAR_SCAN && enable_scan_to_point_) {
-      publishScanToPoint(frame_set);
-    } else if (format_[LIDAR] == OB_FORMAT_LIDAR_POINT) {
-      publishPointCloud(frame_set);
-    } else if (format_[LIDAR] == OB_FORMAT_LIDAR_SPHERE_POINT) {
-      publishSpherePointCloud(frame_set);
-    } else {
+
+    // Handle multi-frame publishing for LIDAR_POINT and LIDAR_SPHERE_POINT formats
+    if ((format_[LIDAR] == OB_FORMAT_LIDAR_POINT || format_[LIDAR] == OB_FORMAT_LIDAR_SPHERE_POINT)) {
+      std::lock_guard<std::mutex> lock(frame_buffer_mutex_);
+      frame_buffer_.push_back(frame_set);
+
+      // If we have enough frames, publish merged point cloud
+      if (frame_buffer_.size() >= static_cast<size_t>(publish_n_pkts_)) {
+        if (format_[LIDAR] == OB_FORMAT_LIDAR_POINT) {
+          publishMergedPointCloud();
+        } else if (format_[LIDAR] == OB_FORMAT_LIDAR_SPHERE_POINT) {
+          publishMergedSpherePointCloud();
+        }
+        frame_buffer_.clear();
+      }
+    }
+    else {
+      // Original single frame publishing logic
+      if (format_[LIDAR] == OB_FORMAT_LIDAR_SCAN && !enable_scan_to_point_) {
+        publishScan(frame_set);
+      } else if (format_[LIDAR] == OB_FORMAT_LIDAR_SCAN && enable_scan_to_point_) {
+        publishScanToPoint(frame_set);
+      }
     }
   } catch (const ob::Error& e) {
     ROS_ERROR_STREAM("onNewFrameSetCallback error: " << e.getMessage());
@@ -378,60 +458,6 @@ void OBLidarNode::publishStaticTransforms() {
   } else {
     static_tf_broadcaster_->sendTransform(static_tf_msgs_);
   }
-}
-
-void OBLidarNode::calcAndPublishStaticTransform() {
-  tf2::Quaternion quaternion_optical, zero_rot;
-  zero_rot.setRPY(0.0, 0.0, 0.0);
-  quaternion_optical.setRPY(-M_PI / 2, 0.0, -M_PI / 2);
-  tf2::Vector3 zero_trans(0, 0, 0);
-  auto base_stream_profile = stream_profile_[base_stream_];
-  if (!base_stream_profile) {
-    ROS_ERROR_STREAM("Failed to get base stream profile");
-    return;
-  }
-  CHECK_NOTNULL(base_stream_profile.get());
-  for (const auto& item : stream_profile_) {
-    auto stream_index = item.first;
-
-    auto stream_profile = item.second;
-    if (!stream_profile) {
-      continue;
-    }
-    OBExtrinsic ex = OBExtrinsic({{1, 0, 0, 0, 1, 0, 0, 0, 1}, {0, 0, 0}});
-
-    auto Q = rotationMatrixToQuaternion(ex.rot);
-    Q = quaternion_optical * Q * quaternion_optical.inverse();
-    tf2::Vector3 trans(ex.trans[0], ex.trans[1], ex.trans[2]);
-    auto timestamp = ros::Time::now();
-    if (stream_index.first != base_stream_.first) {
-      publishStaticTF(timestamp, trans, Q, frame_id_[base_stream_], frame_id_[stream_index]);
-    }
-    publishStaticTF(timestamp, zero_trans, quaternion_optical, frame_id_[stream_index],
-                    optical_frame_id_[stream_index]);
-    ROS_INFO_STREAM("Publishing static transform from " << stream_name_[stream_index] << " to "
-                                                        << stream_name_[base_stream_]);
-    ROS_INFO_STREAM("Translation " << trans[0] << ", " << trans[1] << ", " << trans[2]);
-    ROS_INFO_STREAM("Rotation " << Q.getX() << ", " << Q.getY() << ", " << Q.getZ() << ", "
-                                << Q.getW());
-  }
-}
-
-void OBLidarNode::publishStaticTF(const ros::Time& t, const tf2::Vector3& trans,
-                                  const tf2::Quaternion& q, const std::string& from,
-                                  const std::string& to) {
-  geometry_msgs::TransformStamped msg;
-  msg.header.stamp = t;
-  msg.header.frame_id = from;
-  msg.child_frame_id = to;
-  msg.transform.translation.x = trans[2] / 1000.0;
-  msg.transform.translation.y = -trans[0] / 1000.0;
-  msg.transform.translation.z = -trans[1] / 1000.0;
-  msg.transform.rotation.x = q.getX();
-  msg.transform.rotation.y = q.getY();
-  msg.transform.rotation.z = q.getZ();
-  msg.transform.rotation.w = q.getW();
-  static_tf_msgs_.push_back(msg);
 }
 
 void OBLidarNode::publishDynamicTransforms() {
@@ -505,7 +531,7 @@ void OBLidarNode::publishScanToPoint(std::shared_ptr<ob::FrameSet> frame_set) {
   sensor_msgs::PointCloud2Modifier modifier(*point_cloud_msg);
   modifier.setPointCloud2Fields(
       4, "x", 1, sensor_msgs::PointField::FLOAT32, "y", 1, sensor_msgs::PointField::FLOAT32, "z", 1,
-      sensor_msgs::PointField::FLOAT32, "reflectivity", 1, sensor_msgs::PointField::UINT8);
+      sensor_msgs::PointField::FLOAT32, "intensity", 1, sensor_msgs::PointField::UINT8);
   modifier.resize(scan_count);
   point_cloud_msg->header.stamp = timestamp;
   point_cloud_msg->header.frame_id = frame_id_[LIDAR];
@@ -518,13 +544,13 @@ void OBLidarNode::publishScanToPoint(std::shared_ptr<ob::FrameSet> frame_set) {
   sensor_msgs::PointCloud2Iterator<float> iter_x(*point_cloud_msg, "x");
   sensor_msgs::PointCloud2Iterator<float> iter_y(*point_cloud_msg, "y");
   sensor_msgs::PointCloud2Iterator<float> iter_z(*point_cloud_msg, "z");
-  sensor_msgs::PointCloud2Iterator<uint8_t> iter_reflectivity(*point_cloud_msg, "reflectivity");
-  for (size_t i = 0; i < scan_count; ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_reflectivity) {
+  sensor_msgs::PointCloud2Iterator<uint8_t> iter_intensity(*point_cloud_msg, "intensity");
+  for (size_t i = 0; i < scan_count; ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_intensity) {
     double rad = 0.7853981852531433 + angle_increment_ * i;
     *iter_x = static_cast<float>(scans_data[i].distance * cos(rad) / 1000.0);
     *iter_y = static_cast<float>(scans_data[i].distance * sin(rad) / 1000.0);
     *iter_z = static_cast<float>(0.0);
-    *iter_reflectivity = static_cast<uint8_t>(scans_data[i].intensity);
+    *iter_intensity = static_cast<uint8_t>(scans_data[i].intensity);
   }
   *point_cloud_msg = filterPointCloud(*point_cloud_msg);
   point_cloud_pub_->publish(*point_cloud_msg);
@@ -543,7 +569,7 @@ void OBLidarNode::publishPointCloud(std::shared_ptr<ob::FrameSet> frame_set) {
   sensor_msgs::PointCloud2Modifier modifier(*point_cloud_msg);
   modifier.setPointCloud2Fields(
       5, "x", 1, sensor_msgs::PointField::FLOAT32, "y", 1, sensor_msgs::PointField::FLOAT32, "z", 1,
-      sensor_msgs::PointField::FLOAT32, "reflectivity", 1, sensor_msgs::PointField::UINT8, "tag", 1,
+      sensor_msgs::PointField::FLOAT32, "intensity", 1, sensor_msgs::PointField::UINT8, "tag", 1,
       sensor_msgs::PointField::UINT8);
   modifier.resize(point_count);
   point_cloud_msg->header.stamp = timestamp;
@@ -557,14 +583,14 @@ void OBLidarNode::publishPointCloud(std::shared_ptr<ob::FrameSet> frame_set) {
   sensor_msgs::PointCloud2Iterator<float> iter_x(*point_cloud_msg, "x");
   sensor_msgs::PointCloud2Iterator<float> iter_y(*point_cloud_msg, "y");
   sensor_msgs::PointCloud2Iterator<float> iter_z(*point_cloud_msg, "z");
-  sensor_msgs::PointCloud2Iterator<uint8_t> iter_reflectivity(*point_cloud_msg, "reflectivity");
+  sensor_msgs::PointCloud2Iterator<uint8_t> iter_intensity(*point_cloud_msg, "intensity");
   sensor_msgs::PointCloud2Iterator<uint8_t> iter_tag(*point_cloud_msg, "tag");
   for (size_t i = 0; i < point_count;
-       ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_reflectivity, ++iter_tag) {
+       ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_intensity, ++iter_tag) {
     *iter_x = static_cast<float>(point_data[i].x / 1000.0);
     *iter_y = static_cast<float>(point_data[i].y / -1000.0);
     *iter_z = static_cast<float>(point_data[i].z / 1000.0);
-    *iter_reflectivity = point_data[i].reflectivity;
+    *iter_intensity = point_data[i].reflectivity;
     *iter_tag = point_data[i].tag;
   }
   *point_cloud_msg = filterPointCloud(*point_cloud_msg);
@@ -586,7 +612,7 @@ void OBLidarNode::publishSpherePointCloud(std::shared_ptr<ob::FrameSet> frame_se
   sensor_msgs::PointCloud2Modifier modifier(*point_cloud_msg);
   modifier.setPointCloud2Fields(
       5, "x", 1, sensor_msgs::PointField::FLOAT32, "y", 1, sensor_msgs::PointField::FLOAT32, "z", 1,
-      sensor_msgs::PointField::FLOAT32, "reflectivity", 1, sensor_msgs::PointField::UINT8, "tag", 1,
+      sensor_msgs::PointField::FLOAT32, "intensity", 1, sensor_msgs::PointField::UINT8, "tag", 1,
       sensor_msgs::PointField::UINT8);
   modifier.resize(point_count);
   point_cloud_msg->header.stamp = timestamp;
@@ -600,14 +626,14 @@ void OBLidarNode::publishSpherePointCloud(std::shared_ptr<ob::FrameSet> frame_se
   sensor_msgs::PointCloud2Iterator<float> iter_x(*point_cloud_msg, "x");
   sensor_msgs::PointCloud2Iterator<float> iter_y(*point_cloud_msg, "y");
   sensor_msgs::PointCloud2Iterator<float> iter_z(*point_cloud_msg, "z");
-  sensor_msgs::PointCloud2Iterator<uint8_t> iter_reflectivity(*point_cloud_msg, "reflectivity");
+  sensor_msgs::PointCloud2Iterator<uint8_t> iter_intensity(*point_cloud_msg, "intensity");
   sensor_msgs::PointCloud2Iterator<uint8_t> iter_tag(*point_cloud_msg, "tag");
   for (size_t i = 0; i < point_count;
-       ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_reflectivity, ++iter_tag) {
+       ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_intensity, ++iter_tag) {
     *iter_x = static_cast<float>(result_point[i].x / 1000.0);
     *iter_y = static_cast<float>(result_point[i].y / -1000.0);
     *iter_z = static_cast<float>(result_point[i].z / 1000.0);
-    *iter_reflectivity = result_point[i].reflectivity;
+    *iter_intensity = result_point[i].reflectivity;
     *iter_tag = result_point[i].tag;
   }
   *point_cloud_msg = filterPointCloud(*point_cloud_msg);
@@ -766,6 +792,497 @@ void OBLidarNode::printSensorProfiles(const std::shared_ptr<ob::Sensor>& sensor)
       ROS_INFO_STREAM("unknown profile: " << sensor->getType());
     }
   }
+}
+
+void OBLidarNode::startIMU() {
+  if (!enable_imu_) {
+    return;
+  }
+
+  if (imuPipeline_ != nullptr) {
+    imuPipeline_.reset();
+  }
+
+  imuPipeline_ = std::make_shared<ob::Pipeline>(device_);
+  if (imu_sync_output_start_) {
+    return;
+  }
+
+  try {
+    // ACCEL
+    auto accelProfiles = imuPipeline_->getStreamProfileList(OB_SENSOR_ACCEL);
+    auto accel_range = fullAccelScaleRangeFromString(accel_range_);
+    auto accel_rate = sampleRateFromString(imu_rate_);
+    auto accelProfile = accelProfiles->getAccelStreamProfile(accel_range, accel_rate);
+
+    // GYRO
+    auto gyroProfiles = imuPipeline_->getStreamProfileList(OB_SENSOR_GYRO);
+    auto gyro_range = fullGyroScaleRangeFromString(gyro_range_);
+    auto gyro_rate = sampleRateFromString(imu_rate_);
+    auto gyroProfile = gyroProfiles->getGyroStreamProfile(gyro_range, gyro_rate);
+
+    std::shared_ptr<ob::Config> imuConfig = std::make_shared<ob::Config>();
+    imuConfig->enableStream(accelProfile);
+    imuConfig->enableStream(gyroProfile);
+    imuPipeline_->enableFrameSync();
+    imuPipeline_->start(imuConfig, [this](std::shared_ptr<ob::Frame> frame) {
+      auto frameSet = frame->as<ob::FrameSet>();
+      auto aFrame = frameSet->getFrame(OB_FRAME_ACCEL);
+      auto gFrame = frameSet->getFrame(OB_FRAME_GYRO);
+      if (aFrame && gFrame) {
+        onNewIMUFrameCallback(aFrame, gFrame);
+      }
+    });
+
+    imu_sync_output_start_ = true;
+    ROS_INFO_STREAM("Started IMU stream with accel range: " << fullAccelScaleRangeToString(accel_range)
+                    << ", gyro range: " << fullGyroScaleRangeToString(gyro_range)
+                    << ", rate: " << sampleRateToString(accel_rate));
+
+    // Publish LiDAR to IMU extrinsics
+    publishLidarToIMUExtrinsics();
+
+  } catch (const ob::Error& e) {
+    ROS_ERROR_STREAM("Failed to start IMU stream: " << e.getMessage());
+    imu_sync_output_start_ = false;
+  }
+}
+
+void OBLidarNode::stopIMU() {
+  if (imuPipeline_ && imu_sync_output_start_) {
+    try {
+      imuPipeline_->stop();
+      imu_sync_output_start_ = false;
+      ROS_INFO_STREAM("Stopped IMU stream");
+    } catch (const ob::Error& e) {
+      ROS_ERROR_STREAM("Failed to stop IMU stream: " << e.getMessage());
+    }
+  }
+}
+
+void OBLidarNode::onNewIMUFrameCallback(const std::shared_ptr<ob::Frame> &accelframe,
+                                        const std::shared_ptr<ob::Frame> &gyroframe) {
+  if (!imu_publisher_) {
+    ROS_ERROR_STREAM("IMU publisher not initialized");
+    return;
+  }
+
+  bool has_subscriber = imu_publisher_->getNumSubscribers() > 0;
+  if (!has_subscriber) {
+    return;
+  }
+
+  auto imu_msg = sensor_msgs::Imu();
+  setDefaultIMUMessage(imu_msg);
+
+  imu_msg.header.frame_id = accel_gyro_frame_id_;
+  auto frame_timestamp = getFrameTimestampUs(accelframe);
+  auto timestamp = fromUsToROSTime(frame_timestamp);
+  imu_msg.header.stamp = timestamp;
+
+  auto gyro_frame = gyroframe->as<ob::GyroFrame>();
+  auto gyroData = gyro_frame->getValue();
+  imu_msg.angular_velocity.x = gyroData.x;
+  imu_msg.angular_velocity.y = gyroData.y;
+  imu_msg.angular_velocity.z = gyroData.z;
+
+  auto accel_frame = accelframe->as<ob::AccelFrame>();
+  auto accelData = accel_frame->getValue();
+  imu_msg.linear_acceleration.x = accelData.x;
+  imu_msg.linear_acceleration.y = accelData.y;
+  imu_msg.linear_acceleration.z = accelData.z;
+
+  imu_publisher_->publish(imu_msg);
+
+  // Publish IMU info for each stream
+  for (const auto &stream_index : HID_STREAMS) {
+    if (imu_info_publishers_.find(stream_index) != imu_info_publishers_.end()) {
+      auto imu_info = createIMUInfo(stream_index);
+      imu_info.header = imu_msg.header;
+      imu_info_publishers_[stream_index].publish(imu_info);
+    }
+  }
+}
+
+void OBLidarNode::setDefaultIMUMessage(sensor_msgs::Imu &imu_msg) {
+  imu_msg.header.frame_id = "imu_link";
+  imu_msg.orientation.x = 0.0;
+  imu_msg.orientation.y = 0.0;
+  imu_msg.orientation.z = 0.0;
+  imu_msg.orientation.w = 1.0;
+
+  // Set covariance matrices
+  imu_msg.orientation_covariance[0] = -1;  // Not available
+
+  // Linear acceleration covariance
+  for (int i = 0; i < 9; ++i) {
+    imu_msg.linear_acceleration_covariance[i] = 0.0;
+  }
+  imu_msg.linear_acceleration_covariance[0] = liner_accel_cov_;
+  imu_msg.linear_acceleration_covariance[4] = liner_accel_cov_;
+  imu_msg.linear_acceleration_covariance[8] = liner_accel_cov_;
+
+  // Angular velocity covariance
+  for (int i = 0; i < 9; ++i) {
+    imu_msg.angular_velocity_covariance[i] = 0.0;
+  }
+  imu_msg.angular_velocity_covariance[0] = angular_vel_cov_;
+  imu_msg.angular_velocity_covariance[4] = angular_vel_cov_;
+  imu_msg.angular_velocity_covariance[8] = angular_vel_cov_;
+}
+
+orbbec_camera::IMUInfo OBLidarNode::createIMUInfo(const stream_index_pair &stream_index) {
+  orbbec_camera::IMUInfo imu_info;
+  imu_info.header.frame_id = optical_frame_id_[stream_index];
+
+  // Set noise densities and bias
+  imu_info.noise_density = 0.001;
+  imu_info.random_walk = 0.0001;
+  imu_info.bias[0] = 0.0;
+  imu_info.bias[1] = 0.0;
+  imu_info.bias[2] = 0.0;
+
+  return imu_info;
+}
+
+void OBLidarNode::calcAndPublishStaticTransform() {
+  tf2::Quaternion quaternion_optical, zero_rot;
+  zero_rot.setRPY(0.0, 0.0, 0.0);
+  quaternion_optical.setRPY(-M_PI / 2, 0.0, -M_PI / 2);
+  tf2::Vector3 zero_trans(0, 0, 0);
+
+  auto base_stream_profile = stream_profile_[base_stream_];
+  if (!base_stream_profile) {
+    ROS_ERROR_STREAM("Failed to get base stream profile");
+    return;
+  }
+
+  for (const auto& item : stream_profile_) {
+    auto stream_index = item.first;
+    auto stream_profile = item.second;
+    if (!stream_profile) {
+      continue;
+    }
+
+    OBExtrinsic ex;
+    try {
+      ex = stream_profile->getExtrinsicTo(base_stream_profile);
+    } catch (const ob::Error& e) {
+      ROS_ERROR_STREAM("Failed to get " << stream_name_[stream_index] << " extrinsic: " << e.getMessage());
+      ex = OBExtrinsic({{1, 0, 0, 0, 1, 0, 0, 0, 1}, {0, 0, 0}});
+    }
+
+    auto Q = rotationMatrixToQuaternion(ex.rot);
+    Q = quaternion_optical * Q * quaternion_optical.inverse();
+    tf2::Vector3 trans(ex.trans[0], ex.trans[1], ex.trans[2]);
+    auto timestamp = ros::Time::now();
+
+    if (stream_index.first != base_stream_.first) {
+      publishStaticTF(timestamp, trans, Q, frame_id_[base_stream_], frame_id_[stream_index]);
+    }
+    publishStaticTF(timestamp, zero_trans, quaternion_optical, frame_id_[stream_index], optical_frame_id_[stream_index]);
+
+    ROS_INFO_STREAM("Publishing static transform from " << stream_name_[stream_index] << " to " << stream_name_[base_stream_]);
+    ROS_INFO_STREAM("Translation " << trans[0] << ", " << trans[1] << ", " << trans[2]);
+    ROS_INFO_STREAM("Rotation " << Q.getX() << ", " << Q.getY() << ", " << Q.getZ() << ", " << Q.getW());
+  }
+
+  // Handle IMU extrinsics - same as ROS2 implementation
+  if (enable_imu_) {
+    publishLidarToIMUExtrinsics();
+
+    // Also publish static TF from lidar to IMU
+    OBExtrinsic ex = lidar_to_imu_extrinsic_;
+    auto Q = rotationMatrixToQuaternion(ex.rot);
+    Q = quaternion_optical * Q * quaternion_optical.inverse();
+    tf2::Vector3 trans(ex.trans[0], ex.trans[1], ex.trans[2]);
+    auto timestamp = ros::Time::now();
+    publishStaticTF(timestamp, trans, Q, frame_id_[base_stream_], accel_gyro_frame_id_);
+
+    ROS_INFO_STREAM("Publishing static transform from " << frame_id_[base_stream_]
+                                                        << " to " << accel_gyro_frame_id_);
+    ROS_INFO_STREAM("Translation " << trans[0] << ", " << trans[1] << ", " << trans[2]);
+    ROS_INFO_STREAM("Rotation " << Q.getX() << ", " << Q.getY() << ", " << Q.getZ()
+                                << ", " << Q.getW());
+  }
+}
+
+void OBLidarNode::publishStaticTF(const ros::Time& t, const tf2::Vector3& trans, const tf2::Quaternion& q,
+                                  const std::string& from, const std::string& to) {
+  geometry_msgs::TransformStamped msg;
+  msg.header.stamp = t;
+  msg.header.frame_id = from;
+  msg.child_frame_id = to;
+  msg.transform.translation.x = trans[2] / 1000.0;
+  msg.transform.translation.y = -trans[0] / 1000.0;
+  msg.transform.translation.z = -trans[1] / 1000.0;
+  msg.transform.rotation.x = q.getX();
+  msg.transform.rotation.y = q.getY();
+  msg.transform.rotation.z = q.getZ();
+  msg.transform.rotation.w = q.getW();
+  static_tf_msgs_.push_back(msg);
+}
+
+void OBLidarNode::publishLidarToIMUExtrinsics() {
+  if (!enable_imu_) {
+    return;
+  }
+
+  static const char* frame_id = "lidar_to_imu_extrinsics";
+  OBExtrinsic ex;
+
+  auto base_stream_profile = stream_profile_[base_stream_];
+  if (!base_stream_profile) {
+    ROS_ERROR_STREAM("Failed to get base stream profile");
+    return;
+  }
+
+  try {
+    // Try to get extrinsic from ACCEL first
+    ex = base_stream_profile->getExtrinsicTo(stream_profile_[ACCEL]);
+
+    // Verify if GYRO has the same extrinsic (they should be identical for the same IMU)
+    try {
+      auto gyro_ex = base_stream_profile->getExtrinsicTo(stream_profile_[GYRO]);
+      // Check if ACCEL and GYRO extrinsics are identical
+      bool extrinsics_match = true;
+      for (int i = 0; i < 9; i++) {
+        if (std::abs(ex.rot[i] - gyro_ex.rot[i]) > 1e-6) {
+          extrinsics_match = false;
+          break;
+        }
+      }
+      for (int i = 0; i < 3; i++) {
+        if (std::abs(ex.trans[i] - gyro_ex.trans[i]) > 1e-6) {
+          extrinsics_match = false;
+          break;
+        }
+      }
+
+      if (!extrinsics_match) {
+        ROS_WARN_STREAM("ACCEL and GYRO have different extrinsics, using ACCEL");
+      } else {
+        ROS_DEBUG_STREAM("ACCEL and GYRO extrinsics are identical");
+      }
+    } catch (const ob::Error& e) {
+      ROS_WARN_STREAM("Could not get GYRO extrinsic for verification: " << e.getMessage());
+    }
+
+  } catch (const ob::Error& e) {
+    ROS_WARN_STREAM("Failed to get ACCEL extrinsic, trying GYRO: " << e.getMessage());
+    try {
+      ex = base_stream_profile->getExtrinsicTo(stream_profile_[GYRO]);
+      ROS_INFO_STREAM("Using GYRO extrinsic for IMU");
+    } catch (const ob::Error& e2) {
+      ROS_ERROR_STREAM("Failed to get " << frame_id << " extrinsic from both ACCEL and GYRO: " << e2.getMessage());
+      ex = OBExtrinsic({{1, 0, 0, 0, 1, 0, 0, 0, 1}, {0, 0, 0}});
+    }
+  }
+
+  lidar_to_imu_extrinsic_ = ex;
+
+  // Publish the extrinsics
+  orbbec_camera::Extrinsics extrinsics_msg;
+  extrinsics_msg.header.frame_id = frame_id;
+  extrinsics_msg.header.stamp = ros::Time::now();
+
+  // Copy rotation matrix
+  for (int i = 0; i < 9; i++) {
+    extrinsics_msg.rotation[i] = lidar_to_imu_extrinsic_.rot[i];
+  }
+
+  // Copy translation vector
+  for (int i = 0; i < 3; i++) {
+    extrinsics_msg.translation[i] = lidar_to_imu_extrinsic_.trans[i];
+  }
+
+  lidar_to_imu_extrinsics_publisher_.publish(extrinsics_msg);
+  ROS_INFO_STREAM("Published LiDAR to IMU extrinsics with actual device data");
+}
+
+void OBLidarNode::publishMergedPointCloud() {
+  if (frame_buffer_.empty()) {
+    return;
+  }
+
+  // Calculate total point count across all frames
+  size_t total_point_count = 0;
+  std::vector<std::pair<OBLiDARPoint*, size_t>> frame_data;
+  std::vector<uint64_t> frame_timestamps;
+
+  for (const auto& fs : frame_buffer_) {
+    auto lidar_frame = fs->getFrame(OB_FRAME_LIDAR_POINTS);
+    if (lidar_frame) {
+      auto* point_data = reinterpret_cast<OBLiDARPoint*>(lidar_frame->getData());
+      auto point_count = lidar_frame->getDataSize() / sizeof(OBLiDARPoint);
+      frame_data.emplace_back(point_data, point_count);
+      frame_timestamps.push_back(getFrameTimestampUs(lidar_frame));
+      total_point_count += point_count;
+    }
+  }
+
+  if (total_point_count == 0) {
+    return;
+  }
+
+  // Create merged point cloud message with offset_time field
+  auto point_cloud_msg = std::make_shared<sensor_msgs::PointCloud2>();
+  sensor_msgs::PointCloud2Modifier modifier(*point_cloud_msg);
+  modifier.setPointCloud2Fields(6,
+                                "x", 1, sensor_msgs::PointField::FLOAT32,
+                                "y", 1, sensor_msgs::PointField::FLOAT32,
+                                "z", 1, sensor_msgs::PointField::FLOAT32,
+                                "intensity", 1, sensor_msgs::PointField::UINT8,
+                                "tag", 1, sensor_msgs::PointField::UINT8,
+                                "offset_time", 1, sensor_msgs::PointField::UINT32);
+  modifier.resize(total_point_count);
+
+  // Use the timestamp of the latest frame as the header timestamp
+  auto timestamp = fromUsToROSTime(frame_timestamps.front());
+  point_cloud_msg->header.stamp = timestamp;
+  point_cloud_msg->header.frame_id = frame_id_[LIDAR];
+  point_cloud_msg->height = 1;
+  point_cloud_msg->width = total_point_count;
+  point_cloud_msg->is_dense = true;
+  point_cloud_msg->is_bigendian = false;
+  point_cloud_msg->row_step = point_cloud_msg->width * point_cloud_msg->point_step;
+  point_cloud_msg->data.resize(point_cloud_msg->height * point_cloud_msg->row_step);
+
+  // Create iterators
+  sensor_msgs::PointCloud2Iterator<float> iter_x(*point_cloud_msg, "x");
+  sensor_msgs::PointCloud2Iterator<float> iter_y(*point_cloud_msg, "y");
+  sensor_msgs::PointCloud2Iterator<float> iter_z(*point_cloud_msg, "z");
+  sensor_msgs::PointCloud2Iterator<uint8_t> iter_intensity(*point_cloud_msg, "intensity");
+  sensor_msgs::PointCloud2Iterator<uint8_t> iter_tag(*point_cloud_msg, "tag");
+  sensor_msgs::PointCloud2Iterator<uint32_t> iter_offset_time(*point_cloud_msg, "offset_time");
+
+  // Calculate frame time interval based on lidar rate
+  double frame_interval_us = 1000000.0 / static_cast<double>(rate_int_[LIDAR]);
+
+  // Merge all frames with per-point timestamps
+  for (size_t frame_idx = 0; frame_idx < frame_data.size(); ++frame_idx) {
+    auto* point_data = frame_data[frame_idx].first;
+    auto point_count = frame_data[frame_idx].second;
+    uint64_t frame_timestamp_us = frame_timestamps[frame_idx];
+
+    // Calculate time increment per point within this frame (uniform sampling)
+    double point_time_increment_us = frame_interval_us / static_cast<double>(point_count);
+
+    for (size_t i = 0; i < point_count;
+         ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_intensity, ++iter_tag, ++iter_offset_time) {
+      *iter_x = static_cast<float>(point_data[i].x / 1000.0);
+      *iter_y = static_cast<float>(point_data[i].y / -1000.0);
+      *iter_z = static_cast<float>(point_data[i].z / 1000.0);
+      *iter_intensity = point_data[i].reflectivity;
+      *iter_tag = point_data[i].tag;
+
+      // Calculate per-point offset time in nanoseconds relative to point cloud header timestamp
+      double point_timestamp_us = static_cast<double>(frame_timestamp_us) + (i * point_time_increment_us);
+      uint64_t header_timestamp_us = frame_timestamps[0]; // First frame timestamp
+      *iter_offset_time = static_cast<uint32_t>((point_timestamp_us - static_cast<double>(header_timestamp_us)) * 1000.0); // Convert to nanoseconds
+    }
+  }
+
+  *point_cloud_msg = filterPointCloud(*point_cloud_msg);
+  point_cloud_pub_->publish(*point_cloud_msg);
+}
+
+void OBLidarNode::publishMergedSpherePointCloud() {
+  if (frame_buffer_.empty()) {
+    return;
+  }
+
+  // Calculate total point count across all frames
+  size_t total_point_count = 0;
+  std::vector<std::pair<OBLiDARSpherePoint*, size_t>> frame_data;
+  std::vector<uint64_t> frame_timestamps;
+
+  for (const auto& fs : frame_buffer_) {
+    auto lidar_frame = fs->getFrame(OB_FRAME_LIDAR_POINTS);
+    if (lidar_frame) {
+      auto* point_data = reinterpret_cast<OBLiDARSpherePoint*>(lidar_frame->getData());
+      auto point_count = lidar_frame->getDataSize() / sizeof(OBLiDARSpherePoint);
+      frame_data.emplace_back(point_data, point_count);
+      frame_timestamps.push_back(getFrameTimestampUs(lidar_frame));
+      total_point_count += point_count;
+    }
+  }
+
+  if (total_point_count == 0) {
+    return;
+  }
+
+  // Convert sphere points to cartesian
+  std::vector<OBLiDARPoint> all_converted_points;
+  all_converted_points.reserve(total_point_count);
+
+  for (const auto& frame_pair : frame_data) {
+    auto* sphere_points = frame_pair.first;
+    auto count = frame_pair.second;
+    auto converted_points = spherePointToPoint(sphere_points, count);
+    all_converted_points.insert(all_converted_points.end(), converted_points.begin(), converted_points.end());
+  }
+
+  // Create merged point cloud message with offset_time field
+  auto point_cloud_msg = std::make_shared<sensor_msgs::PointCloud2>();
+  sensor_msgs::PointCloud2Modifier modifier(*point_cloud_msg);
+  modifier.setPointCloud2Fields(6,
+                                "x", 1, sensor_msgs::PointField::FLOAT32,
+                                "y", 1, sensor_msgs::PointField::FLOAT32,
+                                "z", 1, sensor_msgs::PointField::FLOAT32,
+                                "intensity", 1, sensor_msgs::PointField::UINT8,
+                                "tag", 1, sensor_msgs::PointField::UINT8,
+                                "offset_time", 1, sensor_msgs::PointField::UINT32);
+  modifier.resize(total_point_count);
+
+  // Use the timestamp of the latest frame as the header timestamp
+  auto timestamp = fromUsToROSTime(frame_timestamps.front());
+  point_cloud_msg->header.stamp = timestamp;
+  point_cloud_msg->header.frame_id = frame_id_[LIDAR];
+  point_cloud_msg->height = 1;
+  point_cloud_msg->width = total_point_count;
+  point_cloud_msg->is_dense = true;
+  point_cloud_msg->is_bigendian = false;
+  point_cloud_msg->row_step = point_cloud_msg->width * point_cloud_msg->point_step;
+  point_cloud_msg->data.resize(point_cloud_msg->height * point_cloud_msg->row_step);
+
+  // Create iterators
+  sensor_msgs::PointCloud2Iterator<float> iter_x(*point_cloud_msg, "x");
+  sensor_msgs::PointCloud2Iterator<float> iter_y(*point_cloud_msg, "y");
+  sensor_msgs::PointCloud2Iterator<float> iter_z(*point_cloud_msg, "z");
+  sensor_msgs::PointCloud2Iterator<uint8_t> iter_intensity(*point_cloud_msg, "intensity");
+  sensor_msgs::PointCloud2Iterator<uint8_t> iter_tag(*point_cloud_msg, "tag");
+  sensor_msgs::PointCloud2Iterator<uint32_t> iter_offset_time(*point_cloud_msg, "offset_time");
+
+  // Calculate frame time interval based on lidar rate
+  double frame_interval_us = 1000000.0 / static_cast<double>(rate_int_[LIDAR]);
+
+  // Merge all frames with per-point timestamps
+  size_t point_idx = 0;
+  for (size_t frame_idx = 0; frame_idx < frame_data.size(); ++frame_idx) {
+    uint64_t frame_timestamp_us = frame_timestamps[frame_idx];
+    size_t frame_point_count = frame_data[frame_idx].second;
+
+    // Calculate time increment per point within this frame (uniform sampling)
+    double point_time_increment_us = frame_interval_us / static_cast<double>(frame_point_count);
+
+    for (size_t i = 0; i < frame_point_count; ++i, ++point_idx,
+         ++iter_x, ++iter_y, ++iter_z, ++iter_intensity, ++iter_tag, ++iter_offset_time) {
+      *iter_x = static_cast<float>(all_converted_points[point_idx].x / 1000.0);
+      *iter_y = static_cast<float>(all_converted_points[point_idx].y / -1000.0);
+      *iter_z = static_cast<float>(all_converted_points[point_idx].z / 1000.0);
+      *iter_intensity = all_converted_points[point_idx].reflectivity;
+      *iter_tag = all_converted_points[point_idx].tag;
+
+      // Calculate per-point offset time in nanoseconds relative to point cloud header timestamp
+      double point_timestamp_us = static_cast<double>(frame_timestamp_us) + (i * point_time_increment_us);
+      uint64_t header_timestamp_us = frame_timestamps[0]; // First frame timestamp
+      *iter_offset_time = static_cast<uint32_t>((point_timestamp_us - static_cast<double>(header_timestamp_us)) * 1000.0); // Convert to nanoseconds
+    }
+  }
+
+  *point_cloud_msg = filterPointCloud(*point_cloud_msg);
+  point_cloud_pub_->publish(*point_cloud_msg);
 }
 }  // namespace orbbec_lidar
 }  // namespace orbbec_camera

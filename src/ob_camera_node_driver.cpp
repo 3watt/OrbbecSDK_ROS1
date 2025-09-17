@@ -328,7 +328,7 @@ void OBCameraNodeDriver::initializeDevice(const std::shared_ptr<ob::Device> &dev
     device_connected_ = false;
     ob_camera_node_.reset();
     return;
-  } else if (!ob_lidar_node_ && !ob_lidar_node_->isInitialized()) {
+  } else if (!ob_lidar_node_ || !ob_lidar_node_->isInitialized()) {
     device_connected_ = false;
     ob_lidar_node_.reset();
     return;

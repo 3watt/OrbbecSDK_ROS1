@@ -27,6 +27,15 @@
     <!-- Misc parameters -->
     <arg name="device_num" default="1"/>
     <arg name="enable_heartbeat" default="false"/>
+    <!-- IMU parameters -->
+    <arg name="enable_imu" default="true"/>
+    <arg name="imu_rate" default="50hz"/>
+    <arg name="accel_range" default="2g"/>
+    <arg name="gyro_range" default="1000dps"/>
+    <arg name="linear_accel_cov" default="0.0001"/>
+    <arg name="angular_vel_cov" default="0.0001"/>
+    <!-- Multi-frame publishing parameter -->
+    <arg name="publish_n_pkts" default="1"/>
 
     <group ns="$(arg camera_name)">
         <node name="lidar" pkg="orbbec_camera" type="orbbec_camera_node" output="screen">
@@ -54,6 +63,15 @@
             <param name="max_range" value="$(arg max_range)"/>
             <param name="echo_mode" value="$(arg echo_mode)"/>
             <param name="device_num" value="$(arg device_num)"/>
+            <!-- IMU parameters -->
+            <param name="enable_imu" value="$(arg enable_imu)"/>
+            <param name="imu_rate" value="$(arg imu_rate)"/>
+            <param name="accel_range" value="$(arg accel_range)"/>
+            <param name="gyro_range" value="$(arg gyro_range)"/>
+            <param name="linear_accel_cov" value="$(arg linear_accel_cov)"/>
+            <param name="angular_vel_cov" value="$(arg angular_vel_cov)"/>
+            <!-- Multi-frame publishing parameter -->
+            <param name="publish_n_pkts" value="$(arg publish_n_pkts)"/>
         </node>
     </group>
 </launch>

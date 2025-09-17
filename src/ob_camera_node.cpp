@@ -16,6 +16,7 @@
 
 #include "orbbec_camera/ob_camera_node.h"
 #include "libobsensor/hpp/Utils.hpp"
+#include <fstream>
 #if defined(USE_RK_HW_DECODER)
 #include "orbbec_camera/rk_mpp_decoder.h"
 #elif defined(USE_NV_HW_DECODER)

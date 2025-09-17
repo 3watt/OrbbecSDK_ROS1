@@ -102,6 +102,9 @@ class OBLidarNode {
 
   void onNewFrameSetCallback(std::shared_ptr<ob::FrameSet> frame_set);
 
+  void onNewIMUFrameCallback(const std::shared_ptr<ob::Frame> &accelframe,
+                             const std::shared_ptr<ob::Frame> &gyroframe);
+
   void publishScan(std::shared_ptr<ob::FrameSet> frame_set);
 
   void publishScanToPoint(std::shared_ptr<ob::FrameSet> frame_set);
@@ -109,6 +112,10 @@ class OBLidarNode {
   void publishPointCloud(std::shared_ptr<ob::FrameSet> frame_set);
 
   void publishSpherePointCloud(std::shared_ptr<ob::FrameSet> frame_set);
+
+  void publishMergedPointCloud();
+
+  void publishMergedSpherePointCloud();
 
   void publishStaticTransforms();
 
@@ -128,6 +135,16 @@ class OBLidarNode {
 
   sensor_msgs::PointCloud2 filterPointCloud(sensor_msgs::PointCloud2 &point_cloud) const;
 
+  orbbec_camera::IMUInfo createIMUInfo(const stream_index_pair &stream_index);
+
+  void setDefaultIMUMessage(sensor_msgs::Imu &imu_msg);
+
+  void publishLidarToIMUExtrinsics();
+
+  void startIMU();
+
+  void stopIMU();
+
  private:
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
@@ -144,6 +161,7 @@ class OBLidarNode {
       supported_profiles_;
   std::map<stream_index_pair, bool> stream_started_;
   std::map<stream_index_pair, std::string> stream_name_;
+  OBExtrinsic lidar_to_imu_extrinsic_;
 
   std::map<stream_index_pair, std::string> format_str_;
   std::map<stream_index_pair, std::string> optical_frame_id_;
@@ -152,6 +170,9 @@ class OBLidarNode {
 
   std::shared_ptr<ros::Publisher> scan_pub_;
   std::shared_ptr<ros::Publisher> point_cloud_pub_;
+  std::shared_ptr<ros::Publisher> imu_publisher_;
+  std::map<stream_index_pair, ros::Publisher> imu_info_publishers_;
+  ros::Publisher lidar_to_imu_extrinsics_publisher_;
 
   bool publish_tf_ = false;
   bool tf_published_ = false;
@@ -165,6 +186,7 @@ class OBLidarNode {
   bool enable_heartbeat_ = false;
 
   std::shared_ptr<ob::Pipeline> pipeline_ = nullptr;
+  std::shared_ptr<ob::Pipeline> imuPipeline_ = nullptr;
   std::shared_ptr<ob::Config> pipeline_config_ = nullptr;
   std::atomic_bool pipeline_started_{false};
   bool is_initialized_ = false;
@@ -186,6 +208,21 @@ class OBLidarNode {
   float vertical_fov_ = -1;
   bool enable_scan_to_point_ = false;
   double angle_increment_ = 0.0;
+
+  // Multi-frame publishing parameters
+  int publish_n_pkts_ = 1;
+  std::mutex frame_buffer_mutex_;
+  std::vector<std::shared_ptr<ob::FrameSet>> frame_buffer_;
+
+  // IMU
+  bool enable_imu_ = false;
+  std::string imu_rate_ = "50hz";
+  std::string accel_range_ = "2g";
+  std::string gyro_range_ = "1000dps";
+  bool imu_sync_output_start_ = false;
+  std::string accel_gyro_frame_id_ = "camera_imu_frame";
+  double liner_accel_cov_ = 0.0001;
+  double angular_vel_cov_ = 0.0001;
 };
 }  // namespace orbbec_lidar
 }  // namespace orbbec_camera
