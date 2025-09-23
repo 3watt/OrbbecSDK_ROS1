@@ -354,11 +354,11 @@ void OBCameraNodeDriver::initializeDevice(const std::shared_ptr<ob::Device> &dev
 }
 
 void OBCameraNodeDriver::deviceConnectCallback(const std::shared_ptr<ob::DeviceList> &list) {
-  ROS_INFO_STREAM("deviceConnectCallback : deviceConnectCallback start");
   CHECK_NOTNULL(list.get());
   if (device_connected_) {
     return;
   }
+  ROS_INFO_STREAM("deviceConnectCallback : deviceConnectCallback start");
   if (list->deviceCount() == 0) {
     ROS_WARN("No device found");
     return;

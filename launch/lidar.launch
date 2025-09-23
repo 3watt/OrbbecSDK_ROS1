@@ -28,7 +28,7 @@
     <arg name="device_num" default="1"/>
     <arg name="enable_heartbeat" default="false"/>
     <!-- IMU parameters -->
-    <arg name="enable_imu" default="true"/>
+    <arg name="enable_imu" default="false"/>
     <arg name="imu_rate" default="50hz"/>
     <arg name="accel_range" default="2g"/>
     <arg name="gyro_range" default="1000dps"/>
