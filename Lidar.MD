@@ -14,7 +14,7 @@ Before using the OrbbecSDK ROS1 LiDAR driver, please ensure that the following d
 ### 1.2 Install Dependencies
 
 ```bash
-# assume you have sourced ROS environment
+# Assume you have sourced ROS environment
 sudo apt install libgflags-dev nlohmann-json3-dev
 ```
 
@@ -30,11 +30,11 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 
 ```bash
 cd ~/catkin_ws/
-# build release, Default is Debug
+# Build release version, default is Debug
 catkin_make -DCMAKE_BUILD_TYPE=Release
 ```
 
-Launch the LiDAR node
+### 1.5 Launch the LiDAR Node
 
 * First terminal
 
@@ -56,7 +56,12 @@ rviz
 4. Set the `Fixed Frame` to `lidar_lidar_frame` to properly align the data.
 
 * `PointCloud2` visualization example:
+
+![PointCloud2 Visualization Example](docs/images/lidar0.png)
+
 * `LaserScan` visualization example:
+
+![LaserScan Visualization Example](docs/images/lidar1.png)
 
 ## 2. Usage
 
@@ -130,7 +135,9 @@ The `lidar.launch` file contains default parameters for the driver. You can cust
 - **linear_accel_cov**: Linear acceleration covariance value, default is `0.0001`.
 - **angular_vel_cov**: Angular velocity covariance value, default is `0.0001`.
 
-## Point Cloud Data Details
+## 3. Point Cloud Data Details
+
+### 3.1 Point Cloud Format
 
 PointCloud2 (PointXYZITO) point cloud format is as follows:
 
@@ -143,16 +150,39 @@ uint8   tag             # LiDAR tag
 uint32  offset_time     # Point cloud offset relative to topic time, unit nanoseconds
 ```
 
-## 3. IMU Data
+### 3.2 Point Cloud Aggregation Functionality
 
-### 3.1 IMU Topics
+The `publish_n_pkts` parameter enables point cloud aggregation functionality, which allows the LiDAR to accumulate a specified number of frames before publishing, then merge these frames into a larger point cloud data package for publishing.
+
+#### Features:
+
+- **Parameter Range**: 1-12000 frames
+- **Applicable Formats**: Only effective when lidar format is `LIDAR_POINT` or `LIDAR_SPHERE_POINT`
+- **Default Value**: 1 (no aggregation, each frame published individually)
+- **Purpose**: Improve point cloud density, suitable for applications requiring denser point cloud data
+
+#### Usage Examples:
+
+```bash
+# Aggregate 10 frames before publishing
+roslaunch orbbec_camera lidar.launch lidar_format:=LIDAR_POINT publish_n_pkts:=10
+
+# Aggregate 100 frames before publishing
+roslaunch orbbec_camera lidar.launch lidar_format:=LIDAR_SPHERE_POINT publish_n_pkts:=100
+```
+
+**Note**: Increasing the `publish_n_pkts` value will improve point cloud density but will also increase latency and memory usage. Please adjust according to actual application requirements.
+
+## 4. IMU Data
+
+### 4.1 IMU Topics
 
 When IMU is enabled, the following topics will be published:
 
 - **`/lidar/imu/sample`**: Unified IMU topic containing synchronized accelerometer and gyroscope data in `sensor_msgs/Imu` format.
 - **`/lidar/lidar_to_imu`**: Transform relationship from LiDAR coordinate system to IMU coordinate system.
 
-### 3.2 Using IMU Data
+### 4.2 Using IMU Data
 
 To enable IMU data collection:
 
