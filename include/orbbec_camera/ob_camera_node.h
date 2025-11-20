@@ -509,6 +509,7 @@ class OBCameraNode {
   std::atomic_bool pipeline_started_{false};
   bool enable_point_cloud_ = false;
   bool enable_colored_point_cloud_ = false;
+  int point_cloud_decimation_filter_factor_ = 1;
   std::atomic_bool save_point_cloud_{false};
   std::atomic_bool save_colored_point_cloud_{false};
   boost::optional<OBCameraParam> camera_params_;

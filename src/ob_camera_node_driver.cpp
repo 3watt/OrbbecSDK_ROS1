@@ -152,9 +152,9 @@ void OBCameraNodeDriver::init() {
   if (!log_file_name.empty()) {
     try {
       ob::Context::setLoggerFileName(log_file_name);
-      RCLCPP_INFO_STREAM(logger_, "SDK log file name set to: " << log_file_name);
+      ROS_INFO_STREAM("SDK log file name set to: " << log_file_name);
     } catch (const ob::Error &e) {
-      RCLCPP_WARN_STREAM(logger_, "Failed to set SDK log file name: " << e.getMessage());
+      ROS_WARN_STREAM("Failed to set SDK log file name: " << e.getMessage());
     }
   }
   ctx_ = std::make_shared<ob::Context>(config_path_.c_str());

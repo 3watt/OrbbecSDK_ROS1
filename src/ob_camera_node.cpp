@@ -206,6 +206,8 @@ void OBCameraNode::getParameters() {
   enable_pipeline_ = nh_private_.param<bool>("enable_pipeline", true);
   enable_point_cloud_ = nh_private_.param<bool>("enable_point_cloud", true);
   enable_colored_point_cloud_ = nh_private_.param<bool>("enable_colored_point_cloud", false);
+  point_cloud_decimation_filter_factor_ =
+      nh_private_.param<int>("point_cloud_decimation_filter_factor", 1);
   disparity_to_depth_mode_ = nh_private_.param<std::string>("disparity_to_depth_mode", "HW");
   depth_work_mode_ = nh_private_.param<std::string>("depth_work_mode", "");
   enable_soft_filter_ = nh_private_.param<bool>("enable_soft_filter", true);
@@ -863,6 +865,7 @@ void OBCameraNode::publishDepthPointCloud(const std::shared_ptr<ob::FrameSet>& f
   float depth_scale = depth_frame->getValueScale();
   depth_point_cloud_filter_.setPositionDataScaled(depth_scale);
   depth_point_cloud_filter_.setCreatePointFormat(OB_FORMAT_POINT);
+  depth_point_cloud_filter_.setDecimationFactor(point_cloud_decimation_filter_factor_);
   auto result_frame = depth_point_cloud_filter_.process(depth_frame);
   if (!result_frame) {
     ROS_DEBUG("Failed to create point cloud");
@@ -964,6 +967,7 @@ void OBCameraNode::publishColoredPointCloud(const std::shared_ptr<ob::FrameSet>&
   auto depth_scale = depth_frame->getValueScale();
   color_point_cloud_filter_.setPositionDataScaled(depth_scale);
   color_point_cloud_filter_.setCreatePointFormat(OB_FORMAT_RGB_POINT);
+  color_point_cloud_filter_.setDecimationFactor(point_cloud_decimation_filter_factor_);
   auto result_frame = color_point_cloud_filter_.process(frame_set);
   if (!result_frame) {
     ROS_ERROR_STREAM("Failed to process depth frame");

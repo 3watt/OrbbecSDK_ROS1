@@ -84,6 +84,7 @@
             <param name="product_id" value="$(arg product_id)"/>
             <param name="enable_point_cloud" value="$(arg enable_point_cloud)"/>
             <param name="enable_colored_point_cloud" value="$(arg enable_colored_point_cloud)"/>
+            <param name="point_cloud_decimation_filter_factor" value="$(arg point_cloud_decimation_filter_factor)"/>
             <param name="connection_delay" value="$(arg connection_delay)"/>
             <param name="color_width" value="$(arg color_width)"/>
             <param name="color_height" value="$(arg color_height)"/>
