@@ -5,6 +5,10 @@
     <arg name="camera2_prefix" default="02"/>
     <arg name="camera1_usb_port" default="2-1.2.1"/>
     <arg name="camera2_usb_port" default="2-1.1"/>
+    <arg name="camera1_log_level" default="none"/>
+    <arg name="camera2_log_level" default="none"/>
+    <arg name="camera1_log_file_name" default="camera_01.log"/>
+    <arg name="camera2_log_file_name" default="camera_02.log"/>
 
     <arg name="device_num" default="2"/>
     <include file="$(find orbbec_camera)/launch/$(arg 3d_sensor).launch">
@@ -13,6 +17,8 @@
         <arg name="device_num" value="$(arg device_num)"/>
         <arg name="sync_mode" default="software_triggering"/>
         <arg name="trigger_out_enabled" default="true"/>
+        <arg name="log_level" value="$(arg camera1_log_level)"/>
+        <arg name="log_file_name" value="$(arg camera1_log_file_name)"/>
     </include>
 
     <include file="$(find orbbec_camera)/launch/$(arg 3d_sensor).launch">
@@ -21,5 +27,7 @@
         <arg name="device_num" value="$(arg device_num)"/>
         <arg name="sync_mode" default="hardware_triggering"/>
         <arg name="trigger_out_enabled" default="false"/>
+        <arg name="log_level" value="$(arg camera2_log_level)"/>
+        <arg name="log_file_name" value="$(arg camera2_log_file_name)"/>
     </include>
 </launch>

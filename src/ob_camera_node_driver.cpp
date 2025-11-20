@@ -140,16 +140,25 @@ void OBCameraNodeDriver::init() {
   ROS_INFO_STREAM("Setting extensions directory to: " << extension_path_);
   ob::Context::setExtensionsDirectory(extension_path_.c_str());
 
-  ctx_ = std::make_shared<ob::Context>(config_path_.c_str());
   auto log_level = nh_private_.param<std::string>("log_level", "info");
   g_camera_name = nh_private_.param<std::string>("camera_name", "camera");
   auto ob_log_level = obLogSeverityFromString(log_level);
-  ctx_->setLoggerToConsole(ob_log_level);
-
+  auto log_file_name = nh_private_.param<std::string>("log_file_name", "");
+  ob::Context::setLoggerToConsole(ob_log_level);
   // Change to use .ros/Log directory with camera name
   std::string home_dir = std::getenv("HOME") ? std::getenv("HOME") : "";
   std::string log_path = home_dir + "/.ros/Log/" + g_camera_name;
-  ctx_->setLoggerToFile(ob_log_level, log_path.c_str());
+  ob::Context::setLoggerToFile(ob_log_level, log_path.c_str());
+  if (!log_file_name.empty()) {
+    try {
+      ob::Context::setLoggerFileName(log_file_name);
+      RCLCPP_INFO_STREAM(logger_, "SDK log file name set to: " << log_file_name);
+    } catch (const ob::Error &e) {
+      RCLCPP_WARN_STREAM(logger_, "Failed to set SDK log file name: " << e.getMessage());
+    }
+  }
+  ctx_ = std::make_shared<ob::Context>(config_path_.c_str());
+
   force_ip_enable_ = nh_private_.param<bool>("force_ip_enable", false);
   force_ip_mac_ = nh_private_.param<std::string>("force_ip_mac", "");
   force_ip_address_ = nh_private_.param<std::string>("force_ip_address", "");
