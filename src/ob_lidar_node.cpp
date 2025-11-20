@@ -605,7 +605,7 @@ void OBLidarNode::publishPointCloud(std::shared_ptr<ob::FrameSet> frame_set) {
   for (size_t i = 0; i < point_count;
        ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_intensity, ++iter_tag) {
     *iter_x = static_cast<float>(point_data[i].x / 1000.0);
-    *iter_y = static_cast<float>(point_data[i].y / -1000.0);
+    *iter_y = static_cast<float>(point_data[i].y / 1000.0);
     *iter_z = static_cast<float>(point_data[i].z / 1000.0);
     *iter_intensity = point_data[i].reflectivity;
     *iter_tag = point_data[i].tag;
@@ -648,7 +648,7 @@ void OBLidarNode::publishSpherePointCloud(std::shared_ptr<ob::FrameSet> frame_se
   for (size_t i = 0; i < point_count;
        ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_intensity, ++iter_tag) {
     *iter_x = static_cast<float>(result_point[i].x / 1000.0);
-    *iter_y = static_cast<float>(result_point[i].y / -1000.0);
+    *iter_y = static_cast<float>(result_point[i].y / 1000.0);
     *iter_z = static_cast<float>(result_point[i].z / 1000.0);
     *iter_intensity = result_point[i].reflectivity;
     *iter_tag = result_point[i].tag;
@@ -1202,7 +1202,7 @@ void OBLidarNode::publishMergedPointCloud() {
     for (size_t i = 0; i < point_count;
          ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_intensity, ++iter_tag, ++iter_offset_time) {
       *iter_x = static_cast<float>(point_data[i].x / 1000.0);
-      *iter_y = static_cast<float>(point_data[i].y / -1000.0);
+      *iter_y = static_cast<float>(point_data[i].y / 1000.0);
       *iter_z = static_cast<float>(point_data[i].z / 1000.0);
       *iter_intensity = point_data[i].reflectivity;
       *iter_tag = point_data[i].tag;
@@ -1301,7 +1301,7 @@ void OBLidarNode::publishMergedSpherePointCloud() {
     for (size_t i = 0; i < frame_point_count; ++i, ++point_idx, ++iter_x, ++iter_y, ++iter_z,
                 ++iter_intensity, ++iter_tag, ++iter_offset_time) {
       *iter_x = static_cast<float>(all_converted_points[point_idx].x / 1000.0);
-      *iter_y = static_cast<float>(all_converted_points[point_idx].y / -1000.0);
+      *iter_y = static_cast<float>(all_converted_points[point_idx].y / 1000.0);
       *iter_z = static_cast<float>(all_converted_points[point_idx].z / 1000.0);
       *iter_intensity = all_converted_points[point_idx].reflectivity;
       *iter_tag = all_converted_points[point_idx].tag;
