@@ -368,6 +368,12 @@ class OBCameraNode {
 
   bool setReadCustomerData(GetStringRequest &request, GetStringResponse &response);
 
+  bool getLaserStatusCallback(GetBoolRequest &request, GetBoolResponse &response);
+
+  bool setPointCloudDecimationCallback(SetInt32Request &request, SetInt32Response &response);
+
+  bool getPointCloudDecimationCallback(GetInt32Request &request, GetInt32Response &response);
+
   // Set ROI
   void setColorAutoExposureROI();
   void setDepthAutoExposureROI();
@@ -378,8 +384,6 @@ class OBCameraNode {
   void init_interleave_mode();
   int init_interleave_hdr_param();
   int init_interleave_laser_param();
-
-  bool getLaserStatusCallback(GetBoolRequest &request, GetBoolResponse &response);
 
  private:
   ros::NodeHandle nh_;
@@ -478,6 +482,8 @@ class OBCameraNode {
   ros::ServiceServer set_ptp_config_srv_;
   ros::ServiceServer get_ptp_config_srv_;
   ros::ServiceServer get_laser_status_srv_;
+  ros::ServiceServer set_point_cloud_decimation_srv_;
+  ros::ServiceServer get_point_cloud_decimation_srv_;
 
   bool publish_tf_ = true;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_tf_broadcaster_ = nullptr;

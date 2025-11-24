@@ -272,6 +272,18 @@ void OBCameraNode::setupCameraCtrlServices() {
         response.success = this->getLaserStatusCallback(request, response);
         return response.success;
       });
+  set_point_cloud_decimation_srv_ = nh_.advertiseService<SetInt32Request, SetInt32Response>(
+      "/" + camera_name_ + "/" + "set_point_cloud_decimation",
+      [this](SetInt32Request& request, SetInt32Response& response) {
+        response.success = this->setPointCloudDecimationCallback(request, response);
+        return response.success;
+      });
+  get_point_cloud_decimation_srv_ = nh_.advertiseService<GetInt32Request, GetInt32Response>(
+      "/" + camera_name_ + "/" + "get_point_cloud_decimation",
+      [this](GetInt32Request& request, GetInt32Response& response) {
+        response.success = this->getPointCloudDecimationCallback(request, response);
+        return response.success;
+      });
 }
 
 bool OBCameraNode::setMirrorCallback(std_srvs::SetBoolRequest& request,
@@ -1169,5 +1181,48 @@ bool OBCameraNode::getLaserStatusCallback(GetBoolRequest& request, GetBoolRespon
     return false;
   }
   return true;
+}
+
+bool OBCameraNode::setPointCloudDecimationCallback(SetInt32Request& request,
+                                                   SetInt32Response& response) {
+  try {
+    if (request.data < 1 || request.data > 8) {
+      ROS_ERROR_STREAM("Point cloud decimation factor " << request.data << " out of range (1-8)");
+      response.success = false;
+      return false;
+    }
+
+    point_cloud_decimation_filter_factor_ = request.data;
+
+    ROS_INFO_STREAM("Set point cloud decimation factor to: " << request.data);
+    response.success = true;
+    return true;
+  } catch (const ob::Error& e) {
+    ROS_ERROR_STREAM("Failed to set point cloud decimation: " << e.getMessage());
+    response.success = false;
+    response.message = e.getMessage();
+    return false;
+  } catch (const std::exception& e) {
+    ROS_ERROR_STREAM("Failed to set point cloud decimation: " << e.what());
+    response.success = false;
+    response.message = e.what();
+    return false;
+  }
+}
+
+bool OBCameraNode::getPointCloudDecimationCallback(GetInt32Request& request,
+                                                   GetInt32Response& response) {
+  (void)request;
+  try {
+    response.data = point_cloud_decimation_filter_factor_;
+    response.success = true;
+    response.message = "Successfully retrieved point cloud decimation factor";
+    return true;
+  } catch (const std::exception& e) {
+    ROS_ERROR_STREAM("Failed to get point cloud decimation: " << e.what());
+    response.success = false;
+    response.message = e.what();
+    return false;
+  }
 }
 }  // namespace orbbec_camera
