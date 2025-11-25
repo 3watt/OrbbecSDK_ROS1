@@ -15,7 +15,7 @@ Before using the OrbbecSDK ROS1 LiDAR driver, please ensure that the following d
 
 ```bash
 # Assume you have sourced ROS environment
-sudo apt install libgflags-dev nlohmann-json3-dev
+sudo apt install libgflags-dev nlohmann-json3-dev libdw-dev libdwarf-dev libelf-dev
 ```
 
 ### 1.3 Install udev Rules
@@ -106,7 +106,6 @@ The `lidar.launch` file contains default parameters for the driver. You can cust
 - **device_type**: Type of device to launch. Options: `lidar`, `camera`. Set to `lidar` to launch LiDAR device, set to `camera` to launch camera device.
 - **camera_name**: Launch node namespace.
 - **device_num**: Number of devices. Must be filled if you need to launch multiple devices.
-- **upgrade_firmware**: Firmware upgrade function. Input parameter is firmware path.
 - **connection_delay**: Delay time for reopening device (in milliseconds). Immediately reopening device during hot-plug may cause firmware crash.
 - **publish_tf**: Enable TF publishing.
 - **tf_publish_rate**: TF publishing frequency.

@@ -15,7 +15,7 @@
 
 ```bash
 # 假设您已经配置了 ROS 环境
-sudo apt install libgflags-dev nlohmann-json3-dev
+sudo apt install libgflags-dev nlohmann-json3-dev libdw-dev libdwarf-dev libelf-dev
 ```
 
 ### 1.3 安装 udev 规则
@@ -106,7 +106,6 @@ rosrun orbbec_camera list_camera_profile_mode_node
 - **device_type**: 要启动的设备类型。可选值：`lidar`、`camera`。将此参数设置为 `lidar` 启动激光雷达设备，设置为 `camera` 启动摄像头设备。
 - **camera_name**: 启动节点命名空间。
 - **device_num**: 设备数量。如果需要启动多个设备，则必须填写此项。
-- **upgrade_firmware**: 固件升级功能。输入参数是固件路径。
 - **connection_delay**: 重新打开设备的延迟时间（毫秒）。在热插拔期间立即重新打开设备可能导致固件崩溃。
 - **publish_tf**: 启用TF发布。
 - **tf_publish_rate**: TF发布频率。

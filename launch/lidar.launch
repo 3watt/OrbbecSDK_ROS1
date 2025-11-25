@@ -16,8 +16,8 @@
     <arg name="lidar_format" default="ANY"/> <!-- "LIDAR_POINT", "LIDAR_SPHERE_POINT", "LIDAR_SCAN" -->
     <arg name="lidar_rate" default="20"/>
     <arg name="enable_scan_to_point" default="false"/>
-    <arg name="repetitive_scan_mode" default="-1"/>
-    <arg name="filter_level" default="-1"/>
+    <arg name="repetitive_scan_mode" default="-1"/> <!-- "Repetitive scan mode. -1 uses device default; 0 non-repeating; 1/2/4 for different repetition frequencies." -->
+    <arg name="filter_level" default="-1"/> <!-- "Filtering level. -1 uses default; non-negative integers increase filtering strength, 0-5 are valid levels." -->
     <arg name="vertical_fov" default="-1.0"/>
     <arg name="min_angle" default="-135.0"/>
     <arg name="max_angle" default="135.0"/>

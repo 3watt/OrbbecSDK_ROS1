@@ -434,6 +434,15 @@ void OBLidarNode::onNewFrameSetCallback(std::shared_ptr<ob::FrameSet> frame_set)
     // Handle multi-frame publishing for LIDAR_POINT and LIDAR_SPHERE_POINT formats
     if ((format_[LIDAR] == OB_FORMAT_LIDAR_POINT ||
          format_[LIDAR] == OB_FORMAT_LIDAR_SPHERE_POINT)) {
+      if (publish_n_pkts_ == 1) {
+        if (format_[LIDAR] == OB_FORMAT_LIDAR_POINT) {
+          publishPointCloud(frame_set);
+          return;
+        } else if (format_[LIDAR] == OB_FORMAT_LIDAR_SPHERE_POINT) {
+          publishSpherePointCloud(frame_set);
+          return;
+        }
+      }
       std::lock_guard<std::mutex> lock(frame_buffer_mutex_);
       frame_buffer_.push_back(frame_set);
 
