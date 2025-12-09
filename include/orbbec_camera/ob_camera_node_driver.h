@@ -73,6 +73,9 @@ class OBCameraNodeDriver {
 
   bool applyForceIpConfig();
 
+  OBDeviceAccessMode stringToAccessMode(const std::string& mode_str);
+  std::string accessModeToString(OBDeviceAccessMode mode);
+
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
   std::string config_path_;
@@ -87,6 +90,7 @@ class OBCameraNodeDriver {
   std::string device_uid_;
   std::string log_level_;
   std::string usb_port_;
+  OBDeviceAccessMode device_access_mode_ = OB_DEVICE_DEFAULT_ACCESS;
   int connection_delay_ = 1.0;
   std::shared_ptr<std::thread> query_thread_ = nullptr;
   std::recursive_mutex device_lock_;

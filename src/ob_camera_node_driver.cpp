@@ -198,6 +198,10 @@ void OBCameraNodeDriver::init() {
   uvc_backend_ = nh_private_.param<std::string>("uvc_backend", "libuvc");
   preset_firmware_path_ = nh_private_.param<std::string>("preset_firmware_path", "");
   upgrade_firmware_ = nh_private_.param<std::string>("upgrade_firmware", "");
+  device_access_mode_ =
+      stringToAccessMode(nh_private_.param<std::string>("device_access_mode", "default"));
+  ROS_INFO_STREAM("Device access mode: " << accessModeToString(device_access_mode_) << "("
+                                         << device_access_mode_ << ")");
   reboot_service_srv_ = nh_.advertiseService<std_srvs::EmptyRequest, std_srvs::EmptyResponse>(
       "/" + g_camera_name + "/reboot_device",
       [this](std_srvs::EmptyRequest &request, std_srvs::EmptyResponse &response) {
@@ -245,7 +249,7 @@ std::shared_ptr<ob::Device> OBCameraNodeDriver::selectDevice(
     device = selectDeviceByUSBPort(list, usb_port_);
   } else if (device_num_ == 1) {
     ROS_INFO_STREAM("Connecting to the default device");
-    return list->getDevice(0);
+    return list->getDevice(0, device_access_mode_);
   }
   if (device == nullptr) {
     ROS_WARN_THROTTLE(1.0, "Device with serial number %s not found", serial_number_.c_str());
@@ -275,7 +279,7 @@ std::shared_ptr<ob::Device> OBCameraNodeDriver::selectDeviceBySerialNumber(
         ROS_INFO_STREAM("Device serial number: " << sn);
         if (sn == serial_number) {
           ROS_INFO_STREAM("Device serial number <<" << sn << " matched");
-          return list->getDevice(i);
+          return list->getDevice(i, device_access_mode_);
         }
       }
     } catch (ob::Error &e) {
@@ -295,7 +299,7 @@ std::shared_ptr<ob::Device> OBCameraNodeDriver::selectDeviceByUSBPort(
     ROS_INFO_STREAM("selectDeviceByUSBPort : Before device lock lock");
     std::lock_guard<decltype(device_lock_)> lock(device_lock_);
     ROS_INFO_STREAM("selectDeviceByUSBPort : After device lock lock");
-    auto device = list->getDeviceByUid(usb_port.c_str());
+    auto device = list->getDeviceByUid(usb_port.c_str(), device_access_mode_);
     ROS_INFO_STREAM("selectDeviceByUSBPort : After getDeviceByUid");
     return device;
   } catch (ob::Error &e) {
@@ -325,7 +329,7 @@ std::shared_ptr<ob::Device> OBCameraNodeDriver::selectDeviceByNetIP(
       ROS_INFO_STREAM("FindDeviceByNetIP device net ip " << list->getIpAddress(i));
       if (std::string(list->getIpAddress(i)) == net_ip) {
         ROS_INFO_STREAM("getDeviceByNetIP device net ip " << net_ip << " done");
-        return list->getDevice(i);
+        return list->getDevice(i, device_access_mode_);
       }
     } catch (ob::Error &e) {
       ROS_INFO_STREAM("Failed to get device info " << e.getMessage());
@@ -511,7 +515,7 @@ void OBCameraNodeDriver::connectNetDevice(const std::string &ip_address, int por
     return;
   }
   ROS_INFO_STREAM("Connecting to net device " << ip_address << ":" << port);
-  auto device = ctx_->createNetDevice(ip_address.c_str(), port);
+  auto device = ctx_->createNetDevice(ip_address.c_str(), port, device_access_mode_);
   if (device == nullptr) {
     ROS_ERROR_STREAM("Failed to create net device");
     return;
@@ -1023,5 +1027,40 @@ void OBCameraNodeDriver::deviceStatusTimer() {
     device_status_pub_.publish(status_msg);
   }
   // RCLCPP_INFO_STREAM(logger_, "deviceStatusTimer() ");
+}
+
+OBDeviceAccessMode OBCameraNodeDriver::stringToAccessMode(const std::string &mode_str) {
+  std::string lower_mode;
+  std::transform(mode_str.begin(), mode_str.end(), std::back_inserter(lower_mode),
+                 [](auto ch) { return tolower(ch); });
+
+  if (lower_mode == "ea") {
+    return OB_DEVICE_EXCLUSIVE_ACCESS;
+  } else if (lower_mode == "ca") {
+    return OB_DEVICE_CONTROL_ACCESS;
+  } else if (lower_mode == "mr") {
+    return OB_DEVICE_MONITOR_ACCESS;
+  } else if (lower_mode == "default") {
+    return OB_DEVICE_DEFAULT_ACCESS;
+  } else {
+    ROS_WARN_STREAM("Unknown access mode: " << mode_str << ", using default");
+    return OB_DEVICE_DEFAULT_ACCESS;
+  }
+}
+
+std::string OBCameraNodeDriver::accessModeToString(OBDeviceAccessMode mode) {
+  switch (mode) {
+    case OB_DEVICE_EXCLUSIVE_ACCESS:
+      return "EA";
+    case OB_DEVICE_CONTROL_ACCESS:
+      return "CA";
+    case OB_DEVICE_MONITOR_ACCESS:
+      return "MR";
+    case OB_DEVICE_ACCESS_DENIED:
+      return "Denied";
+    case OB_DEVICE_DEFAULT_ACCESS:
+    default:
+      return "Default";
+  }
 }
 }  // namespace orbbec_camera

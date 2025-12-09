@@ -37,6 +37,7 @@
     <!-- If you do not want to automatically enumerate network devices, -->
     <!-- you can set enumerate_net_device to true, ip_address to the device's IP address, and port to the default value of 8090 -->
     <arg name="enumerate_net_device" default="true"/>
+    <arg name="device_access_mode" default="default"/><!-- default, EA, CA or MR -->
     <arg name="ip_address" default=""/>
     <arg name="port" default="0"/>
     <arg name="exposure_range_mode" default="default"/><!-- default, ultimate or regular -->
@@ -264,6 +265,7 @@
             <param name="sync_mode" value="$(arg sync_mode)"/>
             <param name="disparity_to_depth_mode" value="$(arg disparity_to_depth_mode)"/>
             <param name="enumerate_net_device" value="$(arg enumerate_net_device)"/>
+            <param name="device_access_mode" value="$(arg device_access_mode)"/>
             <param name="ip_address" value="$(arg ip_address)"/>
             <param name="port" value="$(arg port)"/>
             <param name="exposure_range_mode" value="$(arg exposure_range_mode)"/>
