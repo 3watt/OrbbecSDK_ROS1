@@ -229,11 +229,12 @@ void OBCameraNodeDriver::init() {
   });
   query_thread_ = std::make_shared<std::thread>([this]() { queryDevice(); });
   reset_device_thread_ = std::make_shared<std::thread>([this]() { resetDeviceThread(); });
-
-  device_status_pub_ =
-      nh_.advertise<orbbec_camera::DeviceStatus>("/" + g_camera_name + "/device_status", 1);
-  device_status_timer_ =
-      nh_.createTimer(ros::Duration(0.5), [this](const ros::TimerEvent &) { deviceStatusTimer(); });
+  if (device_type_ == "camera") {
+    device_status_pub_ =
+        nh_.advertise<orbbec_camera::DeviceStatus>("/" + g_camera_name + "/device_status", 1);
+    device_status_timer_ = nh_.createTimer(
+        ros::Duration(0.5), [this](const ros::TimerEvent &) { deviceStatusTimer(); });
+  }
 }
 
 std::shared_ptr<ob::Device> OBCameraNodeDriver::selectDevice(
