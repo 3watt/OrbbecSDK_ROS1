@@ -142,6 +142,7 @@ void OBCameraNodeDriver::init() {
 
   auto log_level = nh_private_.param<std::string>("log_level", "info");
   g_camera_name = nh_private_.param<std::string>("camera_name", "camera");
+  device_type_ = nh_private_.param<std::string>("device_type", "camera");
   auto ob_log_level = obLogSeverityFromString(log_level);
   auto log_file_name = nh_private_.param<std::string>("log_file_name", "");
   ob::Context::setLoggerToConsole(ob_log_level);
@@ -374,33 +375,56 @@ void OBCameraNodeDriver::initializeDevice(const std::shared_ptr<ob::Device> &dev
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     // Force memory cleanup after camera node destruction
     malloc_trim(0);
+  } else if (ob_lidar_node_) {
+    ob_lidar_node_.reset();
   }
-  ob_camera_node_ = std::make_shared<OBCameraNode>(nh_, nh_private_, device_);
+  if (device_type_ == "camera") {
+    ob_camera_node_ = std::make_shared<OBCameraNode>(nh_, nh_private_, device_);
 
-  if (!upgrade_firmware_.empty()) {
-    firmware_update_success_ = false;
+    if (!upgrade_firmware_.empty()) {
+      firmware_update_success_ = false;
 
-    ob_camera_node_->withDeviceLock([&]() {
-      device_->updateFirmware(
-          upgrade_firmware_.c_str(),
-          std::bind(&OBCameraNodeDriver::firmwareUpdateCallback, this, std::placeholders::_1,
-                    std::placeholders::_2, std::placeholders::_3),
-          false);
-    });
-    if (firmware_update_success_) {
-      return;
+      ob_camera_node_->withDeviceLock([&]() {
+        device_->updateFirmware(
+            upgrade_firmware_.c_str(),
+            std::bind(&OBCameraNodeDriver::firmwareUpdateCallback, this, std::placeholders::_1,
+                      std::placeholders::_2, std::placeholders::_3),
+            false);
+      });
+      if (firmware_update_success_) {
+        return;
+      }
+    }
+  } else if (device_type_ == "lidar") {
+    ob_lidar_node_ = std::make_shared<orbbec_lidar::OBLidarNode>(nh_, nh_private_, device_);
+    if (!upgrade_firmware_.empty()) {
+      firmware_update_success_ = false;
+      ob_lidar_node_->withDeviceLock([&]() {
+        device_->updateFirmware(
+            upgrade_firmware_.c_str(),
+            std::bind(&OBCameraNodeDriver::firmwareUpdateCallback, this, std::placeholders::_1,
+                      std::placeholders::_2, std::placeholders::_3),
+            false);
+      });
+      if (firmware_update_success_) {
+        return;
+      }
     }
   }
-
-  if (ob_camera_node_ && ob_camera_node_->isInitialized()) {
+  if ((ob_camera_node_ && ob_camera_node_->isInitialized()) ||
+      (ob_lidar_node_ && ob_lidar_node_->isInitialized())) {
     device_connected_ = true;
-  } else {
+  } else if (!ob_camera_node_ || !ob_camera_node_->isInitialized()) {
     device_connected_ = false;
     if (ob_camera_node_) {
       ob_camera_node_->clean();
       ob_camera_node_.reset();
       malloc_trim(0);
     }
+    return;
+  } else if (!ob_lidar_node_ || !ob_lidar_node_->isInitialized()) {
+    device_connected_ = false;
+    ob_lidar_node_.reset();
     return;
   }
   // if (!isOpenNIDevice(device_info_->pid())) {
@@ -441,6 +465,7 @@ void OBCameraNodeDriver::deviceConnectCallback(const std::shared_ptr<ob::DeviceL
     ROS_INFO_STREAM("deviceConnectCallback : device already connected, return");
     return;
   }
+  ROS_INFO_STREAM("deviceConnectCallback : deviceConnectCallback start");
   if (list->deviceCount() == 0) {
     ROS_WARN("No device found");
     return;
@@ -530,7 +555,7 @@ void OBCameraNodeDriver::checkConnectionTimer() {
 
   if (!device_connected_) {
     ROS_DEBUG_STREAM("wait for device " << serial_number_ << " to be connected");
-  } else if (!ob_camera_node_) {
+  } else if (!ob_camera_node_ && !ob_lidar_node_) {
     device_connected_ = false;
   }
 }
@@ -612,6 +637,11 @@ void OBCameraNodeDriver::resetDeviceThread() {
         ob_camera_node_.reset();
         // Small delay to allow underlying resources to be fully released
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      } else if (ob_lidar_node_) {
+        ob_lidar_node_->clean();
+        ob_lidar_node_.reset();
+        // Small delay to allow underlying resources to be fully released
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
       }
       ROS_INFO_STREAM("resetDeviceThread: device is disconnected, reset device");
       device_.reset();
@@ -675,7 +705,7 @@ bool OBCameraNodeDriver::rebootDeviceServiceCallback(std_srvs::EmptyRequest &req
     {
       std::lock_guard<decltype(device_lock_)> device_lock(device_lock_);
 
-      if (!device_connected_ || !ob_camera_node_) {
+      if (!device_connected_ || (!ob_camera_node_ && !ob_lidar_node_)) {
         ROS_INFO("Device not connected");
         return false;
       }
@@ -683,7 +713,11 @@ bool OBCameraNodeDriver::rebootDeviceServiceCallback(std_srvs::EmptyRequest &req
       std::string current_device_uid = device_uid_;
       ROS_INFO_STREAM("Rebooting device with UID: " << current_device_uid);
 
-      ob_camera_node_->rebootDevice();
+      if (ob_camera_node_) {
+        ob_camera_node_->rebootDevice();
+      } else if (ob_lidar_node_) {
+        ob_lidar_node_->rebootDevice();
+      }
     }
 
     ROS_INFO("Device reboot initiated, waiting for reconnection");
@@ -838,8 +872,12 @@ void OBCameraNodeDriver::firmwareUpdateCallback(OBFwUpdateState state, const cha
   std::cout << "\033[K";
   std::cout << "Message : " << message << std::endl << std::flush;
   if (state == STAT_DONE) {
-    ROS_INFO_STREAM("Reboot device after firmware update");
-    device_->reboot();
+    ROS_INFO_STREAM("Reboot device");
+    if (ob_camera_node_) {
+      ob_camera_node_->rebootDevice();
+    } else if (ob_lidar_node_) {
+      ob_lidar_node_->rebootDevice();
+    }
     device_connected_ = false;
     upgrade_firmware_ = "";
 

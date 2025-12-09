@@ -16,6 +16,7 @@
 
 #pragma once
 #include "ob_camera_node.h"
+#include "ob_lidar_node.h"
 #include <thread>
 #include <mutex>
 #include <semaphore.h>
@@ -81,6 +82,7 @@ class OBCameraNodeDriver {
   std::string config_path_;
   std::shared_ptr<ob::Context> ctx_ = nullptr;
   std::shared_ptr<OBCameraNode> ob_camera_node_ = nullptr;
+  std::shared_ptr<orbbec_lidar::OBLidarNode> ob_lidar_node_ = nullptr;
   std::shared_ptr<ob::Device> device_ = nullptr;
   std::shared_ptr<ob::DeviceInfo> device_info_ = nullptr;
   ros::WallTimer check_connection_timer_;
@@ -125,5 +127,6 @@ class OBCameraNodeDriver {
   std::atomic<bool> force_ip_success_{false};
   ros::Timer device_status_timer_;
   ros::Publisher device_status_pub_;
+  std::string device_type_;
 };
 }  // namespace orbbec_camera

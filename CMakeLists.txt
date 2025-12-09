@@ -3,7 +3,7 @@ project(orbbec_camera)
 
 # Compiler settings
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -O3")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fPIC -g3")
@@ -167,6 +167,7 @@ endif ()
 set(SOURCE_FILES
   src/d2c_viewer.cpp
   src/ob_camera_node.cpp
+  src/ob_lidar_node.cpp
   src/ob_camera_node_driver.cpp
   src/ros_sensor.cpp
   src/ros_service.cpp

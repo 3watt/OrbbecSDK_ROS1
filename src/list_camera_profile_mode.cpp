@@ -34,6 +34,10 @@ void listSensorProfiles(const std::shared_ptr<ob::Device>& device) {
         auto profile = origin_profile->as<ob::GyroStreamProfile>();
         std::cout << sensor->type() << " profile: " << profile->sampleRate()
                   << "  full scale_range " << profile->fullScaleRange() << std::endl;
+      } else if (sensor->type() == OB_SENSOR_LIDAR) {
+        auto profile = origin_profile->as<ob::LiDARStreamProfile>();
+        std::cout << sensor->type() << " scan rate: " << profile->getScanRate()
+                  << "  format:" << profile->getFormat() << std::endl;
       } else {
         std::cout << "Unknown profile: " << sensor->type() << std::endl;
       }
