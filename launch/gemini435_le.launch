@@ -61,6 +61,7 @@
     <arg name="color_white_balance" default="-1"/>
     <arg name="color_ae_max_exposure" default="-1"/>
     <arg name="color_brightness" default="-1"/>
+    <arg name="color_roi_brightness" default="-1"/>
     <arg name="color_sharpness" default="-1"/>
     <arg name="color_gamma" default="-1"/>
     <arg name="color_saturation" default="-1"/>
@@ -237,6 +238,7 @@
             <param name="color_white_balance" value="$(arg color_white_balance)"/>
             <param name="color_ae_max_exposure" value="$(arg color_ae_max_exposure)"/>
             <param name="color_brightness" value="$(arg color_brightness)"/>
+            <param name="color_roi_brightness" value="$(arg color_roi_brightness)"/>
             <param name="color_sharpness" value="$(arg color_sharpness)"/>
             <param name="color_gamma" value="$(arg color_gamma)"/>
             <param name="color_saturation" value="$(arg color_saturation)"/>

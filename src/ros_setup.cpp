@@ -598,6 +598,17 @@ void OBCameraNode::setupDevices() {
         device_->setIntProperty(OB_PROP_COLOR_BRIGHTNESS_INT, color_brightness_);
       }
     }
+    if (color_roi_brightness_ != -1 &&
+        device_->isPropertySupported(OB_PROP_COLOR_ROI_BRIGHTNESS_INT, OB_PERMISSION_WRITE)) {
+      auto range = device_->getIntPropertyRange(OB_PROP_COLOR_ROI_BRIGHTNESS_INT);
+      if (color_roi_brightness_ < range.min || color_roi_brightness_ > range.max) {
+        ROS_ERROR_STREAM("color ROI brightness value is out of range["
+                         << range.min << "," << range.max << "]please check the value");
+      } else {
+        ROS_INFO_STREAM("Setting color ROI brightness to " << color_roi_brightness_);
+        device_->setIntProperty(OB_PROP_COLOR_ROI_BRIGHTNESS_INT, color_roi_brightness_);
+      }
+    }
     if (color_sharpness_ != -1 &&
         device_->isPropertySupported(OB_PROP_COLOR_SHARPNESS_INT, OB_PERMISSION_WRITE)) {
       auto range = device_->getIntPropertyRange(OB_PROP_COLOR_SHARPNESS_INT);
