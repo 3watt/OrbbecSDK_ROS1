@@ -108,6 +108,16 @@ OBCameraNodeDriver::~OBCameraNodeDriver() {
 
   // Final memory cleanup
   malloc_trim(0);
+
+  // Unregister device changed callback before destroying context
+  if (ctx_ && device_changed_callback_id_ != INVALID_CALLBACK_ID) {
+    try {
+      ctx_->unregisterDeviceChangedCallback(device_changed_callback_id_);
+      device_changed_callback_id_ = INVALID_CALLBACK_ID;
+    } catch (...) {
+      ROS_WARN_STREAM("Exception during device changed callback unregister in destructor");
+    }
+  }
 }
 
 void OBCameraNodeDriver::init() {
@@ -222,11 +232,12 @@ void OBCameraNodeDriver::init() {
   check_connection_timer_ =
       nh_.createWallTimer(ros::WallDuration(1.0),
                           [this](const ros::WallTimerEvent &) { this->checkConnectionTimer(); });
-  ctx_->setDeviceChangedCallback([this](const std::shared_ptr<ob::DeviceList> &removed_list,
-                                        const std::shared_ptr<ob::DeviceList> &added_list) {
-    deviceDisconnectCallback(removed_list);
-    deviceConnectCallback(added_list);
-  });
+  device_changed_callback_id_ = ctx_->registerDeviceChangedCallback(
+      [this](const std::shared_ptr<ob::DeviceList> &removed_list,
+             const std::shared_ptr<ob::DeviceList> &added_list) {
+        deviceDisconnectCallback(removed_list);
+        deviceConnectCallback(added_list);
+      });
   query_thread_ = std::make_shared<std::thread>([this]() { queryDevice(); });
   reset_device_thread_ = std::make_shared<std::thread>([this]() { resetDeviceThread(); });
   if (device_type_ == "camera") {

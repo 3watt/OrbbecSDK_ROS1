@@ -128,5 +128,7 @@ class OBCameraNodeDriver {
   ros::Timer device_status_timer_;
   ros::Publisher device_status_pub_;
   std::string device_type_;
+  OBCallbackId device_changed_callback_id_ =
+      INVALID_CALLBACK_ID;  // Store callback ID for unregistering
 };
 }  // namespace orbbec_camera
