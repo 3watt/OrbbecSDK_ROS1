@@ -89,8 +89,6 @@ class FpsDelayStatus {
     msg.depth_delay_ms_min = delay_min_;
     msg.depth_delay_ms_max = delay_max_;
 
-    // RCLCPP_ERROR_STREAM(logger_, "Depth status: " << fps_sum_ << "," << frame_count_);
-
     last_delay_ms_ = 0.0;
     last_fps_ = 0.0;
     frame_count_ = 0;
