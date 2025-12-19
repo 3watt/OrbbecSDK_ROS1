@@ -1079,7 +1079,7 @@ void OBCameraNode::setupProfiles() {
       ROS_ERROR_STREAM("set d2c error " << e.getMessage());
     }
   }
-  if (depth_registration_ || enable_colored_point_cloud_) {
+  if (depth_registration_ || align_mode_ == "SW") {
     align_filter_ = std::make_shared<ob::Align>(align_target_stream_);
   }
 }
@@ -1348,10 +1348,9 @@ void OBCameraNode::setupPipelineConfig() {
     pipeline_config_.reset();
   }
   pipeline_config_ = std::make_shared<ob::Config>();
-  auto pid = device_info_->pid();
-  if (!isGemini335PID(pid) && depth_registration_ && enable_stream_[COLOR] &&
+  if (align_mode_ == "HW" && depth_registration_ && enable_stream_[COLOR] &&
       enable_stream_[DEPTH]) {
-    OBAlignMode align_mode = align_mode_ == "HW" ? ALIGN_D2C_HW_MODE : ALIGN_D2C_SW_MODE;
+    OBAlignMode align_mode = ALIGN_D2C_HW_MODE;
     ROS_INFO_STREAM("set align mode to " << align_mode_);
     pipeline_config_->setAlignMode(align_mode);
     pipeline_config_->setDepthScaleRequire(enable_depth_scale_);
