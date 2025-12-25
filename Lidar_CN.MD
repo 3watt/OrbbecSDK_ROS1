@@ -17,6 +17,7 @@
 # 假设您已经配置了 ROS 环境
 sudo apt install libgflags-dev nlohmann-json3-dev libdw-dev libdwarf-dev libelf-dev
 ```
+ubuntu 20 之前的版本需要安装 `nlohmann-json-dev`。
 
 ### 1.3 安装 udev 规则
 

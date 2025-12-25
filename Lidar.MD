@@ -17,6 +17,7 @@ Before using the OrbbecSDK ROS1 LiDAR driver, please ensure that the following d
 # Assume you have sourced ROS environment
 sudo apt install libgflags-dev nlohmann-json3-dev libdw-dev libdwarf-dev libelf-dev
 ```
+Versions of Ubuntu prior to version 20 require the installation of `nlohmann-json-dev`.
 
 ### 1.3 Install udev Rules
 
