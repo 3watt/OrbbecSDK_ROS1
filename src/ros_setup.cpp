@@ -298,6 +298,36 @@ void OBCameraNode::setupDepthPostProcessFilter() {
       });
 }
 void OBCameraNode::setupDevices() {
+  if (!preset_resolution_config_.empty()) {
+    OBPresetResolutionConfig presetResolutionConfig;
+    std::istringstream iss(preset_resolution_config_);
+    std::string token;
+    std::vector<int> values;
+    values.reserve(4);
+    while (std::getline(iss, token, ',')) {
+      values.push_back(std::stoi(token));
+    }
+
+    if (values.size() >= 4) {
+      presetResolutionConfig.width = values[0];
+      presetResolutionConfig.height = values[1];
+      presetResolutionConfig.irDecimationFactor = values[2];
+      presetResolutionConfig.depthDecimationFactor = values[3];
+    } else {
+      ROS_ERROR_STREAM(
+          "Invalid preset_resolution_config parameter. "
+          "Expected format: width,height,ir_decimation_factor,depth_decimation_factor");
+      return;
+    }
+    ROS_INFO_STREAM("Setting preset resolution config to "
+                    << "width: " << presetResolutionConfig.width
+                    << ", height: " << presetResolutionConfig.height << ", ir decimation factor: "
+                    << presetResolutionConfig.irDecimationFactor << ", depth decimation factor: "
+                    << presetResolutionConfig.depthDecimationFactor);
+
+    device_->setStructuredData(OB_STRUCT_PRESET_RESOLUTION_CONFIG,
+                               (uint8_t*)&presetResolutionConfig, sizeof(presetResolutionConfig));
+  }
   auto sensor_list = device_->getSensorList();
   for (size_t i = 0; i < sensor_list->count(); i++) {
     auto sensor = sensor_list->getSensor(i);

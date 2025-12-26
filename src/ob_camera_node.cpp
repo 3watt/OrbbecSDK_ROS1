@@ -211,6 +211,7 @@ void OBCameraNode::getParameters() {
       nh_private_.param<int>("point_cloud_decimation_filter_factor", 1);
   disparity_to_depth_mode_ = nh_private_.param<std::string>("disparity_to_depth_mode", "HW");
   depth_work_mode_ = nh_private_.param<std::string>("depth_work_mode", "");
+  preset_resolution_config_ = nh_private_.param<std::string>("preset_resolution_config", "");
   enable_soft_filter_ = nh_private_.param<bool>("enable_soft_filter", true);
   enable_color_auto_exposure_ = nh_private_.param<bool>("enable_color_auto_exposure", true);
   enable_color_auto_exposure_priority_ =

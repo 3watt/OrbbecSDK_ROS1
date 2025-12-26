@@ -572,6 +572,7 @@ class OBCameraNode {
   // Only for Gemini2 device
   std::string disparity_to_depth_mode_ = "HW";
   std::string depth_work_mode_;
+  std::string preset_resolution_config_;
   OBMultiDeviceSyncMode sync_mode_ = OB_MULTI_DEVICE_SYNC_MODE_STANDALONE;
   std::string sync_mode_str_;
   int depth_delay_us_ = 0;

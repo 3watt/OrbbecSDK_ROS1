@@ -13,6 +13,7 @@
     <arg name="uvc_backend" default="libuvc"/><!-- "libuvc" or "v4l2" -->
     <arg name="enable_sync_host_time" default="true"/>
     <arg name="depth_work_mode" default="AMR Perception"/>
+    <arg name="preset_resolution_config" default="1280, 800, 1, 1"/>
     <arg name="diagnostics_frequency" default="1.0"/>
     <arg name="enable_laser" default="true"/>
     <arg name="depth_precision" default=""/>
@@ -196,6 +197,7 @@
             <param name="uvc_backend" value="$(arg uvc_backend)"/>
             <param name="enable_sync_host_time" value="$(arg enable_sync_host_time)"/>
             <param name="depth_work_mode" value="$(arg depth_work_mode)"/>
+            <param name="preset_resolution_config" value="$(arg preset_resolution_config)"/>
             <param name="diagnostics_frequency" value="$(arg diagnostics_frequency)"/>
             <param name="align_mode" value="$(arg align_mode)"/>
             <param name="align_target_stream" value="$(arg align_target_stream)"/>
