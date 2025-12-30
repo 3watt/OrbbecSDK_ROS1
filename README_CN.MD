@@ -136,6 +136,17 @@
       <td>full maintenance</td>
       <td>recommended for new designs</td>
     </tr>
+    <tr>
+      <td rowspan="2" style="text-align: center; font-weight: bold;">LiDAR</td>
+      <td>Pulsar ME450</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Pulsar SL450</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
+    </tr>
   </tbody>
 </table>
 **注意**: 如果没有找到您的设备，请联系 FAE 或销售人员获取帮助。
@@ -265,6 +276,8 @@ rosservice call /camera/get_sdk_version "{}"
 | Femto Mega              | [1.3.1](https://github.com/orbbec/OrbbecFirmware/releases/tag/Femto-Mega-Firmware)              |                                               femto_mega.launch  |
 | Femto Mega I             | [2.0.4](https://github.com/orbbec/OrbbecFirmware/releases/tag/Femto-Mega-I-Firmware)              |                                               femto_mega.launch  |
 | Astra 2                 | [2.8.20](https://orbbec-debian-repos-aws.s3.amazonaws.com/product/Astra2_Release_2.8.20.zip)    |                                               astra2.launch    |
+| Pulsar SL450            | 2.2.4.5 | lidar.launch.py |
+| Pulsar ME450            | 1.0.0.6 | lidar.launch.py |
 
 所有的 launch 文件基本相同，主要区别在于针对同系列不同型号设定的参数默认值不同。USB 2.0 和 USB 3.0 等标准差异，可能需要对参数进行调整。如果遇到启动失败，请仔细检查规格手册，尤其是 launch 文件中的分辨率设置及其他参数，确保兼容性和最佳性能。
 
