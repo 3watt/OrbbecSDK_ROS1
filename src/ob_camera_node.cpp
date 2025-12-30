@@ -2080,6 +2080,11 @@ void OBCameraNode::calcAndPublishStaticTransform() {
     publishStaticTF(ros::Time::now(), zero_trans, zero_rot, camera_link_frame_id_,
                     frame_id_[base_stream_]);
   }
+  if (enable_sync_output_accel_gyro_) {
+    zero_rot.setRPY(0.0, 0.0, 0.0);
+    publishStaticTF(ros::Time::now(), zero_trans, zero_rot, optical_frame_id_[GYRO],
+                    accel_gyro_frame_id_);
+  }
 }
 
 void OBCameraNode::publishDynamicTransforms() {
