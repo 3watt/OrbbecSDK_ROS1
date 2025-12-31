@@ -279,8 +279,8 @@ The following devices are supported by the OrbbecSDK ROS Wrapper.
 | Femto Mega              | [1.3.1](https://github.com/orbbec/OrbbecFirmware/releases/tag/Femto-Mega-Firmware)              |                                               femto_mega.launch  |
 | Femto Mega I             | [2.0.4](https://github.com/orbbec/OrbbecFirmware/releases/tag/Femto-Mega-I-Firmware)              |                                               femto_mega.launch  |
 | Astra 2                 | [2.8.20](https://orbbec-debian-repos-aws.s3.amazonaws.com/product/Astra2_Release_2.8.20.zip)    |                                               astra2.launch    |
-| Pulsar SL450            | 2.2.4.5 | lidar.launch.py |
-| Pulsar ME450            | 1.0.0.6 | lidar.launch.py |
+| Pulsar SL450            | 2.2.4.5 | lidar.launch |
+| Pulsar ME450            | 1.0.0.6 | lidar.launch |
 
 All launch files are essentially similar, with the primary difference being the default values of the parameters set
 for different models within the same series. Differences in USB standards, such as USB 2.0 versus USB 3.0, may require adjustments to these parameters. If you encounter a startup failure, please carefully review the specification manual. Pay special attention to the resolution settings in the launch file, as well as other parameters, to ensure compatibility and optimal performance.
