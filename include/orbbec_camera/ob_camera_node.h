@@ -290,6 +290,10 @@ class OBCameraNode {
   bool setGainCallback(SetInt32Request &request, SetInt32Response &response,
                        const stream_index_pair &stream_index);
 
+  bool setColorSaturationCallback(SetInt32Request& request, SetInt32Response& response);
+  bool setColorContrastCallback(SetInt32Request& request, SetInt32Response& response);
+  bool setColorBrightnessCallback(SetInt32Request& request, SetInt32Response& response);
+
   bool getAutoWhiteBalanceCallback(GetInt32Request &request, GetInt32Response &response);
 
   bool setAutoWhiteBalanceCallback(SetInt32Request &request, SetInt32Response &response);
@@ -484,6 +488,10 @@ class OBCameraNode {
   ros::ServiceServer get_laser_status_srv_;
   ros::ServiceServer set_point_cloud_decimation_srv_;
   ros::ServiceServer get_point_cloud_decimation_srv_;
+
+  ros::ServiceServer set_color_saturation_srv_;
+  ros::ServiceServer set_color_contrast_srv_;
+  ros::ServiceServer set_color_brightness_srv_;
 
   bool publish_tf_ = true;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_tf_broadcaster_ = nullptr;

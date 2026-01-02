@@ -146,6 +146,24 @@ void OBCameraNode::setupCameraCtrlServices() {
         response.success = this->setWhiteBalanceCallback(request, response);
         return response.success;
       });
+  set_color_saturation_srv_ = nh_.advertiseService<SetInt32Request, SetInt32Response>(
+        "/" + camera_name_ + "/" + "set_color_saturation",
+        [this](SetInt32Request& request, SetInt32Response& response) {
+          response.success = this->setColorSaturationCallback(request, response);
+          return response.success;
+        });
+  set_color_contrast_srv_ = nh_.advertiseService<SetInt32Request, SetInt32Response>(
+      "/" + camera_name_ + "/" + "set_color_contrast",
+      [this](SetInt32Request& request, SetInt32Response& response) {
+        response.success = this->setColorContrastCallback(request, response);
+        return response.success;
+      });
+  set_color_brightness_srv_ = nh_.advertiseService<SetInt32Request, SetInt32Response>(
+      "/" + camera_name_ + "/" + "set_color_brightness",
+      [this](SetInt32Request& request, SetInt32Response& response) {
+        response.success = this->setColorBrightnessCallback(request, response);
+        return response.success;
+      });
   reset_white_balance_srv_ = nh_.advertiseService<std_srvs::EmptyRequest, std_srvs::EmptyResponse>(
       "/" + camera_name_ + "/" + "reset_white_balance",
       [this](std_srvs::EmptyRequest& request, std_srvs::EmptyResponse& response) {
@@ -679,6 +697,42 @@ bool OBCameraNode::setWhiteBalanceCallback(SetInt32Request& request, SetInt32Res
     return false;
   }
   return true;
+}
+
+bool OBCameraNode::setColorSaturationCallback(SetInt32Request& request, SetInt32Response& response) {
+  try {
+    device_->setIntProperty(OB_PROP_COLOR_SATURATION_INT, request.data);
+    response.success = true;
+    return true;
+  } catch (const ob::Error& e) {
+    ROS_ERROR_STREAM("Failed to set color saturation: " << e.getMessage());
+    response.success = false;
+    return false;
+  }
+}
+
+bool OBCameraNode::setColorContrastCallback(SetInt32Request& request, SetInt32Response& response) {
+  try {
+    device_->setIntProperty(OB_PROP_COLOR_CONTRAST_INT, request.data);
+    response.success = true;
+    return true;
+  } catch (const ob::Error& e) {
+    ROS_ERROR_STREAM("Failed to set color contrast: " << e.getMessage());
+    response.success = false;
+    return false;
+  }
+}
+
+bool OBCameraNode::setColorBrightnessCallback(SetInt32Request& request, SetInt32Response& response) {
+  try {
+    device_->setIntProperty(OB_PROP_COLOR_BRIGHTNESS_INT, request.data);
+    response.success = true;
+    return true;
+  } catch (const ob::Error& e) {
+    ROS_ERROR_STREAM("Failed to set color brightness: " << e.getMessage());
+    response.success = false;
+    return false;
+  }
 }
 
 bool OBCameraNode::setAutoExposureCallback(std_srvs::SetBoolRequest& request,
